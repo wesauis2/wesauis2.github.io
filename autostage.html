@@ -15,7 +15,7 @@
 <body class="bg-gray-900 flex items-center justify-center h-screen flex flex-col place-items-center gap-3">
     <h1 class="text-4xl font-semibold text-blue-400 col-span-2">Stalker</h1>
 
-    <div class="w-full flex items-center justify-end p-3 md:p-0">
+    <div class="w-full flex items-center justify-center p-3 md:p-0">
         <div class="relative">
             <video id="webcam" autoplay class="ring-2 ring-gray-700 bg-gray-800 rounded-lg z-10"></video>
             <div id="peopleOverlay" class="absolute border-teal-300 border-dashed border-2 rounded-md"></div>
@@ -25,7 +25,7 @@
         </div>
     </div>
 
-    <div class="relative w-full flex items-center justify-start p-3 md:p-0">
+    <div class="relative w-full flex items-center justify-center p-3 md:p-0">
         <canvas id="canvas" class="ring-2 ring-gray-700 bg-gray-800 rounded-lg"></canvas>
     </div>
 
@@ -53,10 +53,6 @@
             let h = videoElement.videoHeight
 			videoElement.width = w
 			videoElement.height = h
-			canvas.width = w
-            canvas.height = h
-			
-			console.log(w,h)
 			
 			//const wmax = window.innerWidth / 1.2
 			//const hmax = window.innerHeight / 1.2
@@ -73,7 +69,10 @@
 			//}
 		
 		
-			canvas.style = `width: ${getComputedStyle(videoElement).width}px; height: ${getComputedStyle(videoElement).height}`
+			w = parseFloat(getComputedStyle(videoElement).width)
+			h = parseFloat(getComputedStyle(videoElement).height)
+			canvas.width = w
+            canvas.height = h
 			
 			return [w,h]
 		}
@@ -217,12 +216,20 @@
 
             // Clear the canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+			dbg('Canvas Resolution', canvas.width+'x'+canvas.height);
+
+			const videoRect = makeRect(
+				resize(videoElement.videoWidth, canvas.width, visibleRect.x), 
+				resize(videoElement.videoHeight, canvas.height,visibleRect.y), 
+				resize(videoElement.videoWidth, canvas.width, visibleRect.w), 
+				resize(videoElement.videoHeight, canvas.height,visibleRect.h)
+			)
 
             // Draw the current video frame onto the canvas (cropped)
             ctx.drawImage(
                 videoElement,    // Video element
-                visibleRect.x, visibleRect.y,    // Source rectangle (x, y) from the webcam feed
-                visibleRect.w, visibleRect.h,  // Source width and height (cropped area)
+                videoRect.x, videoRect.y,    // Source rectangle (x, y) from the webcam feed
+                videoRect.w, videoRect.h,  // Source width and height (cropped area)
                 0, 0,            // Destination x, y (position of the cropped content on the canvas)
                 canvas.width,    // Destination width (same as canvas)
                 canvas.height    // Destination height (same as canvas)
@@ -236,15 +243,21 @@
                 .then(stream => videoElement.srcObject = stream)
                 .catch(function(error) {
                     alert('Error accessing webcam: '+ error.message);
-					// videoElement.src = "992697-hd_1920_1080_25fps.mp4"
-					// videoElement.loop = true
-					// document.body.onclick = () => videoElement.play()
+					if (true) {
+					videoElement.src = "992697-hd_1920_1080_25fps.mp4"
+					videoElement.loop = true
+					document.body.onclick = () => videoElement.play()
+					}
                 });
         } else {
             alert('Your browser does not support webcam access.');
         }
 
         /// AI Time :)
+		
+		function resize(targetMax, localMax, local) {
+			return local * targetMax / localMax
+		}
 
         async function startDetection() {
             const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
@@ -269,8 +282,14 @@
                 }
 
                 resetAnimation()
-                peopleRect = makeRect(xMin, yMin, xMax-xMin, yMax-yMin)
-
+                peopleRect = makeRect(
+					resize(canvas.width, videoElement.videoWidth, xMin), 
+					resize(canvas.height, videoElement.videoHeight, yMin), 
+					resize(canvas.width, videoElement.videoWidth, xMax-xMin), 
+					resize(canvas.height, videoElement.videoHeight, yMax-yMin)
+				)
+				dbg('PeopleRect', "x="+peopleRect.x+",y="+peopleRect.y+",w="+peopleRect.w+",h="+peopleRect.h)
+				
                 const h = Math.min(peopleRect.h*2.8, cameraRect.h)
                 const dh = h - peopleRect.h
                 const aspectRatio = Math.max(cameraRect.w, cameraRect.h) / Math.min(cameraRect.w, cameraRect.h)
