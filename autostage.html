@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autostage.js</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-detection"></script>
+</head>
+<body class="bg-gray-900 flex items-center justify-center h-screen grid grid-cols-2 place-items-center gap-3">
+    <h1 class="text-4xl font-semibold text-blue-400 col-span-2">Stalker</h1>
+
+    <div class="w-full flex items-center justify-end">
+        <div class="relative">
+            <video id="webcam" autoplay class="ring-2 ring-gray-700 bg-gray-800 rounded-lg z-10"></video>
+            <div id="peopleOverlay" class="absolute border-teal-300 border-dashed border-2 rounded-md"></div>
+            <div id="targetOverlay" class="absolute border-fuchsia-300 border-dashed border-2 rounded-md"></div>
+            <div id="visibleOverlay" class="absolute border-red-300 border-dashed border-4 rounded-md"></div>
+            <!-- <div id="stageOverlay" class="absolute border-amber-700 border-dashed border-2 rounded-lg"></div> -->
+        </div>
+    </div>
+
+    <div class="relative w-full flex items-center justify-start">
+        <canvas id="canvas" class="ring-2 ring-gray-700 bg-gray-800 rounded-lg"></canvas>
+    </div>
+
+    <div class="col-span-2 text-sm text-gray-400 font-mono">
+        <h1 class="text-center text-2xl font-semibold text-blue-400 col-span-2">debug info</h1>
+        <div id="dbg" class="grid grid-rows-3 items-center"></div>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const peopleOverlay = document.getElementById('peopleOverlay');
+        const targetOverlay = document.getElementById('targetOverlay');
+        const visibleOverlay = document.getElementById('visibleOverlay');
+        // const stageOverlay = document.getElementById('stageOverlay');
+        const dbgContainer = document.getElementById('dbg');
+        const dbgEls = {}
+
+        videoElement.onloadedmetadata = () => {
+            canvas.width = videoElement.videoWidth
+            canvas.height = videoElement.videoHeight
+
+            cameraRect = makeRect(0,0,canvas.width,canvas.height)
+            visibleRect = makeRect(0,0,canvas.width,canvas.height)
+            targetRect = makeRect(35,35,canvas.width-35*2,canvas.height-35*2)
+            // stageRect = makeRect(0,50,canvas.width,canvas.height/3*2)
+            peopleRect = makeRect(150,150,canvas.width-150*2,canvas.height-150*2)
+
+            dbg('Camera Resolution', `${cameraRect.w}x${cameraRect.h}`)
+
+            // Startup
+            resetAnimation()
+            updateVisibleFrame(0);
+            startDetection()
+        };
+
+        const makeRect = (x,y,w,h) => ({x,y,w,h})
+        let cameraRect = null; // camera viewport (0,0,width,height)
+        let peopleRect = null; // sum of person rects
+        let sourceRect = null; // rect where the animation is starting from
+        let targetRect = null; // rect where the animation should end
+        let visibleRect = null; // output rect
+        // let stageRect = null; // rect sent to the ai for analysis
+
+        // Animation variables
+        const animationDuration = 550; 
+        let startTime = null;
+
+        function dbg(key, value) {
+            key = key.replaceAll(/[^\d\w]/gi, '')
+            let el = document.getElementById(`dbg_${key}`)
+
+            if (!el) {
+                dbgContainer.innerHTML += `<p><strong>${key}: </strong><span id="dbg_${key}"></span></p>`
+                el = document.getElementById(`dbg_${key}`)
+            }
+
+            el.innerText = value
+        }
+
+        // Linear interpolation function
+        function lerp(start, end, t) {
+            return start + (end - start) * t;
+        }
+
+        // Function to start or reset the animation for new target
+        function resetAnimation() {
+            sourceRect = {...visibleRect}
+            startTime = null; // Reset start time so animation restarts
+        }
+
+        // Function to generate a random integer between two values (inclusive)
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Function to generate random cropping position and size
+        function randomizeCropArea() {
+            const width = getRandomInt(100, 500)
+            const ratioAspect = Math.min(cameraRect.w, cameraRect.h) / Math.max(cameraRect.w, cameraRect.h)
+
+            targetRect = makeRect(
+                getRandomInt(0, cameraRect.w - 200),
+                getRandomInt(0, cameraRect.h - 150),
+                width,
+                ratioAspect * width,
+            );
+
+            const endX = targetRect.x + targetRect.w
+            if (endX > cameraRect.w) {
+                const diff = endX - cameraRect.w
+                targetRect.x -= diff
+            }
+
+            const endY = targetRect.y + targetRect.h
+            if (endY > cameraRect.h) {
+                const diff = endY - cameraRect.h
+                targetRect.y -= diff
+            }
+
+            resetAnimation();
+        }
+
+        function updateOverlay(element, rect) {
+            if (!rect) return
+
+            element.style.left = `${rect.x}px`;
+            element.style.top = `${rect.y}px`;
+            element.style.width = `${rect.w}px`;
+            element.style.height = `${rect.h}px`;
+        }
+
+        setInterval(() => {
+            updateOverlay(peopleOverlay, peopleRect)
+            updateOverlay(targetOverlay, targetRect)
+            updateOverlay(visibleOverlay, visibleRect)
+            // updateOverlay(stageOverlay, stageRect)
+        }, 1/60*1000) // 60fps
+
+        function calculateCloseness(targetRect, sourceRect) {
+            const xDistance = Math.abs(targetRect.x - sourceRect.x);
+            const yDistance = Math.abs(targetRect.y - sourceRect.y);
+            const wDistance = Math.abs(targetRect.w - sourceRect.w);
+            const hDistance = Math.abs(targetRect.h - sourceRect.h);
+
+            // Normalize by the maximum possible difference, assuming a range for x, y, w, and h
+            const maxWidth = Math.max(targetRect.w, sourceRect.w);
+            const maxHeight = Math.max(targetRect.h, sourceRect.h);
+
+            // Sum up normalized distances
+            const closeness = (xDistance / maxWidth) + (yDistance / maxHeight) + (wDistance / maxWidth) + (hDistance / maxHeight);
+            
+            // Normalize final closeness value to range [0, 1]
+            return closeness / 4; // Averaging over 4 components (x, y, w, h)
+        }
+
+        function updateVisibleFrame(timestamp) {
+            // If the animation has just started, set startTime
+            if (!startTime) startTime = timestamp;
+
+            // Calculate how much time has passed since the animation started
+            let timeElapsed = timestamp - startTime;
+            let progress = Math.min(timeElapsed / animationDuration, 1); // Progress is between 0 and 1
+            
+            if (calculateCloseness(targetRect, sourceRect) > 0.04) {
+                dbg('Interpolation', `${(progress*100).toFixed(1)}%`)
+
+                visibleRect.x = lerp(sourceRect.x, targetRect.x, progress);
+                visibleRect.y = lerp(sourceRect.y, targetRect.y, progress);
+                visibleRect.w = lerp(sourceRect.w, targetRect.w, progress);
+                visibleRect.h = lerp(sourceRect.h, targetRect.h, progress);
+                dbg('Visible Resolution', `${visibleRect.w.toFixed(0)}x${visibleRect.h.toFixed(0)}`)
+            } else {
+                dbg('Interpolation', 'paused')
+            }
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the current video frame onto the canvas (cropped)
+            ctx.drawImage(
+                videoElement,    // Video element
+                visibleRect.x, visibleRect.y,    // Source rectangle (x, y) from the webcam feed
+                visibleRect.w, visibleRect.h,  // Source width and height (cropped area)
+                0, 0,            // Destination x, y (position of the cropped content on the canvas)
+                canvas.width,    // Destination width (same as canvas)
+                canvas.height    // Destination height (same as canvas)
+            );
+
+            requestAnimationFrame(updateVisibleFrame);
+        }
+
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => videoElement.srcObject = stream)
+                .catch(function(error) {
+                    console.log('Error accessing webcam: ', error);
+                });
+        } else {
+            alert('Your browser does not support webcam access.');
+        }
+
+        /// AI Time :)
+
+        async function startDetection() {
+            const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
+            const detectorConfig = {
+                runtime: 'mediapipe', // or 'tfjs'
+                solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection',
+                maxFaces: 4
+            }
+            const detector = await faceDetection.createDetector(model, detectorConfig);
+
+            setInterval(async () => {
+                const faces = await detector.estimateFaces(videoElement);
+                dbg('Faces', faces.length)
+                if (!faces.length) return;
+
+                let xMin, xMax, yMin, yMax
+                for (const face of faces) {
+                    xMin = Math.min(xMin??face.box.xMin, face.box.xMin)
+                    xMax = Math.max(xMax??face.box.xMax, face.box.xMax)
+                    yMin = Math.min(yMin??face.box.yMin, face.box.yMin)
+                    yMax = Math.max(yMax??face.box.yMax, face.box.yMax)
+                }
+
+                resetAnimation()
+                peopleRect = makeRect(xMin, yMin, xMax-xMin, yMax-yMin)
+
+                const h = Math.min(peopleRect.h*2.8, cameraRect.h)
+                const dh = h - peopleRect.h
+                const aspectRatio = Math.max(cameraRect.w, cameraRect.h) / Math.min(cameraRect.w, cameraRect.h)
+                const w = Math.min(h*aspectRatio, cameraRect.w)
+
+                let x = xMin-w/2+peopleRect.w/2
+                let y = peopleRect.y-dh/1.75
+
+                if (x+w > cameraRect.w) {
+                    x -= x+w - cameraRect.w
+                } else if (x<0) {
+                    x = 0
+                }
+
+                if (y+h > cameraRect.h) {
+                    y -= y+h - cameraRect.h
+                } else if (y<0) {
+                    y = 0
+                }
+                
+                targetRect = makeRect(x, y, w, h)
+            }, 150)
+        }
+    </script>
+</body>
+</html>
