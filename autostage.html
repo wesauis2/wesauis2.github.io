@@ -15,6 +15,12 @@
 <body class="bg-gray-900 flex items-center h-screen flex flex-col place-items-center gap-3">
     <h1 class="text-4xl font-semibold text-blue-400 col-span-2">Stalker</h1>
 
+	<div class="video-options">
+        <select name="" id="" class="custom-select">
+            <option value="">Select camera</option>
+        </select>
+    </div>
+
     <div class="w-full flex items-center justify-center p-3 md:p-0">
         <div class="relative">
             <video id="webcam" autoplay class="ring-2 ring-gray-700 bg-gray-800 rounded-lg z-10"></video>
@@ -239,16 +245,29 @@
         }
 
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => videoElement.srcObject = stream)
-                .catch(function(error) {
-                    alert('Error accessing webcam: '+ error.message);
-					if (true) {
-					videoElement.src = "7592117-uhd_2160_3744_30fps.mp4"
-					videoElement.loop = true
-					document.body.onclick = () => videoElement.play()
-					}
-                });
+			const cameraOptions = document.querySelector('.video-options>select');
+			;(async () => {
+			  const devices = await navigator.mediaDevices.enumerateDevices();
+			  const videoDevices = devices.filter(device => true || device.kind === 'videoinput');
+			  const options = videoDevices.map(videoDevice => {
+				return `<option value="${videoDevice.deviceId}">${videoDevice.label || videoDevice.kind}</option>`;
+			  });
+			  cameraOptions.innerHTML += options.join('');
+			})();
+			
+			cameraOptions.onchange = () => {
+				// navigator.mediaDevices.getUserMedia({ video: true })
+				navigator.mediaDevices.getUserMedia({ deviceId: { exact: cameraOptions.value }})
+					.then(stream => videoElement.srcObject = stream)
+					.catch(function(error) {
+						alert('Error accessing webcam: '+ error.message);
+						if (false) {
+						videoElement.src = "7592117-uhd_2160_3744_30fps.mp4"
+						videoElement.loop = true
+						document.body.onclick = () => videoElement.play()
+						}
+					});
+			}		
         } else {
             alert('Your browser does not support webcam access.');
         }
