@@ -251,7 +251,7 @@
 				const devices = await navigator.mediaDevices.enumerateDevices();
 				const videoDevices = devices.filter(device => device.kind === 'videoinput');
 				const options = videoDevices.map(videoDevice => {
-					return `<option value="${videoDevice.deviceId}">${videoDevice.label || videoDevice.kind}</option>`;
+					return `<option value="${videoDevice.deviceId}" data-facing="${(videoDevice.label || videoDevice.kind).includes('facing back') ? 'environment' : 'user'}">${videoDevice.label || videoDevice.kind}</option>`;
 				});
 				cameraOptions.innerHTML += options.join('');
 			})();
@@ -259,7 +259,8 @@
 			cameraOptions.onchange = () => {
 				console.log({ deviceId: { exact: cameraOptions.value }})
 				// navigator.mediaDevices.getUserMedia({ video: true })
-				navigator.mediaDevices.getUserMedia({ video: true, deviceId: { exact: cameraOptions.value }})
+				const option = document.querySelector("[value=\""+cameraOptions.value+"\"]")
+				navigator.mediaDevices.getUserMedia({ video: true, deviceId: { exact: cameraOptions.value }, facingMode: { ideal: option.facing }})
 					.then(stream => { videoElement.srcObject = stream; })
 					.catch(function(error) {
 						alert('Error accessing webcam: "'+cameraOptions.value+'". Error: '+ error.message);
