@@ -251,7 +251,7 @@
 				const devices = await navigator.mediaDevices.enumerateDevices();
 				const videoDevices = devices.filter(device => device.kind === 'videoinput');
 				const options = videoDevices.map(videoDevice => {
-				return `<option value="${videoDevice.deviceId}">${videoDevice.label || videoDevice.kind}</option>`;
+					return `<option value="${videoDevice.deviceId}">${videoDevice.label || videoDevice.kind}</option>`;
 				});
 				cameraOptions.innerHTML += options.join('');
 			})();
@@ -260,7 +260,7 @@
 				console.log({ deviceId: { exact: cameraOptions.value }})
 				// navigator.mediaDevices.getUserMedia({ video: true })
 				navigator.mediaDevices.getUserMedia({ video: true, deviceId: { exact: cameraOptions.value }})
-					.then(stream => { videoElement.srcObject = stream; videoElement.play() })
+					.then(stream => { videoElement.srcObject = stream; })
 					.catch(function(error) {
 						alert('Error accessing webcam: "'+cameraOptions.value+'". Error: '+ error.message);
 						if (false) {
@@ -270,7 +270,7 @@
 						}
 						
 						navigator.mediaDevices.getUserMedia({ video: true })
-							.then(stream => { videoElement.srcObject = stream; videoElement.play() })
+							.then(stream => { videoElement.srcObject = stream; })
 					});
 			}		
         } else {
