@@ -248,7 +248,7 @@
 			const cameraOptions = document.querySelector('.video-options>select');
 			;(async () => {
 			  const devices = await navigator.mediaDevices.enumerateDevices();
-			  const videoDevices = devices.filter(device => true || device.kind === 'videoinput');
+			  const videoDevices = devices.filter(device => device.kind === 'videoinput');
 			  const options = videoDevices.map(videoDevice => {
 				return `<option value="${videoDevice.deviceId}">${videoDevice.label || videoDevice.kind}</option>`;
 			  });
