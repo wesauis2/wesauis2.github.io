@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-detection"></script>
 </head>
-<body class="bg-gray-900 flex items-center justify-center h-screen flex flex-col place-items-center gap-3">
+<body class="bg-gray-900 flex items-center h-screen flex flex-col place-items-center gap-3">
     <h1 class="text-4xl font-semibold text-blue-400 col-span-2">Stalker</h1>
 
     <div class="w-full flex items-center justify-center p-3 md:p-0">
@@ -244,7 +244,7 @@
                 .catch(function(error) {
                     alert('Error accessing webcam: '+ error.message);
 					if (true) {
-					videoElement.src = "992697-hd_1920_1080_25fps.mp4"
+					videoElement.src = "7592117-uhd_2160_3744_30fps.mp4"
 					videoElement.loop = true
 					document.body.onclick = () => videoElement.play()
 					}
@@ -288,15 +288,22 @@
 					resize(canvas.width, videoElement.videoWidth, xMax-xMin), 
 					resize(canvas.height, videoElement.videoHeight, yMax-yMin)
 				)
-				dbg('PeopleRect', "x="+peopleRect.x+",y="+peopleRect.y+",w="+peopleRect.w+",h="+peopleRect.h)
 				
-                const h = Math.min(peopleRect.h*2.8, cameraRect.h)
-                const dh = h - peopleRect.h
-                const aspectRatio = Math.max(cameraRect.w, cameraRect.h) / Math.min(cameraRect.w, cameraRect.h)
-                const w = Math.min(h*aspectRatio, cameraRect.w)
-
-                let x = xMin-w/2+peopleRect.w/2
-                let y = peopleRect.y-dh/1.75
+				let x,y,w,h
+				const aspectRatio = Math.max(cameraRect.w, cameraRect.h) / Math.min(cameraRect.w, cameraRect.h);
+				if (canvas.width > canvas.height) {
+					h = Math.min(peopleRect.h*2.8, cameraRect.h)
+					const dh = h - peopleRect.h
+					w = Math.min(h*aspectRatio, cameraRect.w)
+					x = peopleRect.x-w/2+peopleRect.w/2
+					y = peopleRect.y-dh/1.75
+				} else {
+					w = Math.min(peopleRect.w*2.8, cameraRect.w)
+					const dw = w - peopleRect.w
+					h = Math.min(w*aspectRatio, cameraRect.h)
+					x = peopleRect.x-w/2+peopleRect.w/2
+					y = peopleRect.y-dw/1.75
+				}
 
                 if (x+w > cameraRect.w) {
                     x -= x+w - cameraRect.w
