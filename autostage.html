@@ -259,7 +259,7 @@
 			cameraOptions.onchange = () => {
 				console.log({ deviceId: { exact: cameraOptions.value }})
 				// navigator.mediaDevices.getUserMedia({ video: true })
-				navigator.mediaDevices.getUserMedia({ deviceId: { exact: cameraOptions.value }})
+				navigator.mediaDevices.getUserMedia({ video: true, deviceId: { exact: cameraOptions.value }})
 					.then(stream => { videoElement.srcObject = stream; videoElement.play() })
 					.catch(function(error) {
 						alert('Error accessing webcam: "'+cameraOptions.value+'". Error: '+ error.message);
