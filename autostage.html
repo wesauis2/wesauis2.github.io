@@ -247,25 +247,30 @@
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 			const cameraOptions = document.querySelector('.video-options>select');
 			;(async () => {
-			  const devices = await navigator.mediaDevices.enumerateDevices();
-			  const videoDevices = devices.filter(device => device.kind === 'videoinput');
-			  const options = videoDevices.map(videoDevice => {
+				await navigator.mediaDevices.getUserMedia({ video: true });  
+				const devices = await navigator.mediaDevices.enumerateDevices();
+				const videoDevices = devices.filter(device => device.kind === 'videoinput');
+				const options = videoDevices.map(videoDevice => {
 				return `<option value="${videoDevice.deviceId}">${videoDevice.label || videoDevice.kind}</option>`;
-			  });
-			  cameraOptions.innerHTML += options.join('');
+				});
+				cameraOptions.innerHTML += options.join('');
 			})();
 			
 			cameraOptions.onchange = () => {
+				console.log({ deviceId: { exact: cameraOptions.value }})
 				// navigator.mediaDevices.getUserMedia({ video: true })
 				navigator.mediaDevices.getUserMedia({ deviceId: { exact: cameraOptions.value }})
-					.then(stream => videoElement.srcObject = stream)
+					.then(stream => { videoElement.srcObject = stream; videoElement.play() })
 					.catch(function(error) {
-						alert('Error accessing webcam: '+ error.message);
+						alert('Error accessing webcam: "'+cameraOptions.value+'". Error: '+ error.message);
 						if (false) {
 						videoElement.src = "7592117-uhd_2160_3744_30fps.mp4"
 						videoElement.loop = true
 						document.body.onclick = () => videoElement.play()
 						}
+						
+						navigator.mediaDevices.getUserMedia({ video: true })
+							.then(stream => { videoElement.srcObject = stream; videoElement.play() })
 					});
 			}		
         } else {
