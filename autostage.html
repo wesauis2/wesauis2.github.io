@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-slate-950">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AutoStage Pro - AI Smart Camera Tracking</title>
     
     <!-- Tailwind CSS -->
@@ -35,8 +35,8 @@
     <style>
         /* Custom scrollbars and styling */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
         }
         ::-webkit-scrollbar-track {
             background: rgba(15, 23, 42, 0.6);
@@ -46,253 +46,304 @@
             border-radius: 9999px;
         }
         .glass-panel {
-            background: rgba(15, 23, 42, 0.75);
+            background: rgba(15, 23, 42, 0.78);
             backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .glass-card {
-            background: rgba(30, 41, 59, 0.5);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(30, 41, 59, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        /* Mobile notch safe areas */
+        .pb-safe {
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+        .pt-safe {
+            padding-top: max(0.75rem, env(safe-area-inset-top));
         }
     </style>
 </head>
-<body class="h-full flex flex-col font-sans overflow-x-hidden antialiased selection:bg-cyan-500 selection:text-slate-950">
+<body class="h-full w-full overflow-hidden flex flex-col font-sans bg-slate-950 text-slate-100">
 
-    <!-- Top Navigation / Header -->
-    <header class="glass-panel sticky top-0 z-40 w-full border-b border-slate-800/80 px-4 py-3 sm:px-6">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl shadow-lg shadow-cyan-500/20 text-slate-950">
-                    <i data-lucide="video" class="w-5 h-5 font-bold"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-none bg-gradient-to-r from-slate-100 via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                        AutoStage <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-medium ml-1">AI PRO</span>
-                    </h1>
-                    <p class="text-xs text-slate-400 mt-0.5">Smart Cameraman & Face Tracking</p>
-                </div>
-            </div>
+    <!-- Application Shell Container -->
+    <div id="appContainer" class="relative w-full h-full flex flex-col overflow-hidden">
 
-            <!-- View Mode Selector Tabs -->
-            <div class="flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs font-medium">
-                <button id="tabStage" onclick="setViewMode('stage')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 bg-cyan-500 text-slate-950 font-semibold shadow-md shadow-cyan-500/20">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                    <span>Stage</span>
-                </button>
-                <button id="tabDebug" onclick="setViewMode('debug')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all duration-200">
-                    <i data-lucide="binary" class="w-3.5 h-3.5"></i>
-                    <span>Debug View</span>
-                </button>
-                <button id="tabSplit" onclick="setViewMode('split')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all duration-200">
-                    <i data-lucide="columns-2" class="w-3.5 h-3.5"></i>
-                    <span>Split View</span>
-                </button>
-            </div>
-
-            <!-- Quick Status Badges -->
-            <div class="hidden md:flex items-center space-x-3 text-xs font-mono">
-                <div class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800">
-                    <span class="relative flex h-2 w-2">
-                        <span id="aiPulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                        <span id="aiDot" class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-                    </span>
-                    <span id="statusText" class="text-slate-300">Initializing Model...</span>
-                </div>
-                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-400">
-                    <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i>
-                    <span>Faces: <strong id="faceCountBadge" class="text-slate-200">0</strong></span>
-                </div>
-                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-400">
-                    <i data-lucide="gauge" class="w-3.5 h-3.5 text-emerald-400"></i>
-                    <span>FPS: <strong id="fpsBadge" class="text-slate-200">0</strong></span>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content Body -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-        <!-- Left / Center: Camera Display Container -->
-        <section class="lg:col-span-8 flex flex-col space-y-4">
-            
-            <div class="relative w-full aspect-video rounded-2xl bg-slate-900 overflow-hidden border border-slate-800 shadow-2xl group flex items-center justify-center">
+        <!-- Top Navigation / Header (Desktop Header & Mobile Floating Pill) -->
+        <header class="glass-panel sticky top-0 z-40 w-full border-b border-slate-800/80 px-4 py-2.5 sm:px-6 pt-safe">
+            <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
                 
-                <!-- Hidden Source Video Element -->
-                <video id="webcam" autoplay playsinline muted class="hidden"></video>
-
-                <!-- Clean Auto-Stage Output Canvas -->
-                <canvas id="outputCanvas" class="w-full h-full object-contain block"></canvas>
-
-                <!-- Raw Video Feed (Only used in Split View Mode) -->
-                <div id="splitRawContainer" class="hidden absolute top-3 right-3 w-1/3 max-w-[220px] aspect-video rounded-xl overflow-hidden border border-slate-700/80 shadow-2xl bg-slate-950/80 z-20">
-                    <canvas id="rawCanvas" class="w-full h-full object-cover"></canvas>
-                    <div class="absolute bottom-1 left-2 text-[10px] font-mono font-semibold text-slate-300 bg-slate-950/70 px-1.5 py-0.5 rounded">Raw Input</div>
-                </div>
-
-                <!-- Debug Overlay Box Layer (Active in Debug Mode) -->
-                <div id="debugOverlayLayer" class="pointer-events-none absolute inset-0 z-10 transition-opacity duration-300 opacity-0">
-                    <!-- Face Bound Box -->
-                    <div id="dbgPeopleRect" class="absolute border-2 border-dashed border-cyan-400 bg-cyan-500/10 rounded-lg transition-all duration-75 hidden">
-                        <span class="absolute -top-6 left-0 text-[10px] font-mono bg-cyan-500 text-slate-950 font-semibold px-1.5 py-0.5 rounded shadow">Detected Face Area</span>
+                <!-- Brand Title -->
+                <div class="flex items-center space-x-2.5">
+                    <div class="p-2 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl shadow-lg shadow-cyan-500/20 text-slate-950">
+                        <i data-lucide="video" class="w-4 h-4 sm:w-5 sm:h-5 font-bold"></i>
                     </div>
-                    <!-- Target Smooth Framing Box -->
-                    <div id="dbgTargetRect" class="absolute border-2 border-dashed border-fuchsia-400 bg-fuchsia-500/10 rounded-lg transition-all duration-75 hidden">
-                        <span class="absolute -top-6 right-0 text-[10px] font-mono bg-fuchsia-500 text-slate-950 font-semibold px-1.5 py-0.5 rounded shadow">Target Frame</span>
-                    </div>
-                    <!-- Interpolated Current Visible Viewport Box -->
-                    <div id="dbgVisibleRect" class="absolute border-2 border-amber-400 bg-amber-500/5 rounded-lg transition-all duration-75 hidden">
-                        <span class="absolute bottom-1 right-2 text-[10px] font-mono text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded">Active Crop View</span>
+                    <div>
+                        <h1 class="font-bold text-base sm:text-lg leading-none bg-gradient-to-r from-slate-100 via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                            AutoStage <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-medium ml-0.5">AI PRO</span>
+                        </h1>
+                        <p class="text-[10px] sm:text-xs text-slate-400 mt-0.5 hidden xs:block">Smart Cameraman & Face Tracking</p>
                     </div>
                 </div>
 
-                <!-- Loading State Overlay -->
-                <div id="loadingSpinner" class="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center space-y-4 z-30 transition-opacity duration-500">
-                    <div class="relative flex items-center justify-center">
-                        <div class="w-12 h-12 rounded-full border-2 border-slate-800 border-t-cyan-500 animate-spin"></div>
-                        <i data-lucide="scan-face" class="w-5 h-5 text-cyan-400 absolute"></i>
-                    </div>
-                    <div class="text-center space-y-1">
-                        <p class="text-sm font-medium text-slate-200" id="loadingMessage">Starting Camera & Neural Engine...</p>
-                        <p class="text-xs text-slate-500">Please grant camera permissions when prompted</p>
-                    </div>
-                </div>
-
-                <!-- Floating Toolbar Controls Overlay -->
-                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center space-x-2 px-3 py-2 rounded-2xl glass-panel border border-slate-700/50 shadow-2xl z-20">
-                    <!-- Quick Camera Flip Switch (Front / Back on Mobile) -->
-                    <button id="btnFlipCamera" title="Switch Camera (Front/Back)" onclick="toggleFacingMode()" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/50">
-                        <i data-lucide="switch-camera" class="w-4 h-4 text-cyan-400"></i>
+                <!-- View Mode Selector Tabs -->
+                <div class="flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs font-medium">
+                    <button id="tabStage" onclick="setViewMode('stage')" class="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 rounded-lg transition-all duration-200 bg-cyan-500 text-slate-950 font-semibold shadow-md shadow-cyan-500/20">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Stage</span>
                     </button>
-                    <!-- Toggle Auto Stage Framing -->
-                    <button id="btnToggleTracking" title="Toggle Auto Framing" onclick="toggleTracking()" class="flex items-center space-x-2 px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold transition active:scale-95 shadow-md shadow-cyan-500/20">
-                        <i data-lucide="crosshair" class="w-4 h-4"></i>
-                        <span class="text-xs" id="btnTrackingLabel">Auto Stage On</span>
+                    <button id="tabDebug" onclick="setViewMode('debug')" class="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 rounded-lg text-slate-400 hover:text-slate-200 transition-all duration-200">
+                        <i data-lucide="binary" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Debug</span>
                     </button>
-                    <!-- Fullscreen Canvas -->
-                    <button id="btnFullscreen" title="Toggle Fullscreen" onclick="toggleFullscreen()" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/50">
-                        <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                    <button id="tabSplit" onclick="setViewMode('split')" class="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 rounded-lg text-slate-400 hover:text-slate-200 transition-all duration-200">
+                        <i data-lucide="columns-2" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Split</span>
                     </button>
                 </div>
-            </div>
 
-            <!-- Mobile Stats Bar (Visible on mobile) -->
-            <div class="grid grid-cols-3 gap-2 md:hidden text-center text-xs font-mono">
-                <div class="p-2.5 glass-card rounded-xl">
-                    <span class="text-slate-400 block text-[10px]">FACES</span>
-                    <strong id="mobileFaceCount" class="text-cyan-400 text-sm">0</strong>
-                </div>
-                <div class="p-2.5 glass-card rounded-xl">
-                    <span class="text-slate-400 block text-[10px]">FPS</span>
-                    <strong id="mobileFps" class="text-emerald-400 text-sm">0</strong>
-                </div>
-                <div class="p-2.5 glass-card rounded-xl">
-                    <span class="text-slate-400 block text-[10px]">CAM FACING</span>
-                    <strong id="mobileFacing" class="text-amber-400 text-sm">User</strong>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- Right Side: Control Settings & Debug Telemetry -->
-        <aside class="lg:col-span-4 space-y-5">
-            
-            <!-- Camera & Hardware Controls Card -->
-            <div class="glass-panel p-5 rounded-2xl space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h2 class="font-semibold text-sm text-slate-200 flex items-center space-x-2">
-                        <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
-                        <span>Camera Settings</span>
-                    </h2>
-                    <span id="facingBadge" class="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">FRONT</span>
-                </div>
-
-                <!-- Camera Device Select Dropdown -->
-                <div class="space-y-1.5">
-                    <label for="cameraSelect" class="text-xs font-medium text-slate-400 flex items-center justify-between">
-                        <span>Select Video Device</span>
-                        <i data-lucide="camera" class="w-3.5 h-3.5 text-slate-500"></i>
-                    </label>
-                    <select id="cameraSelect" onchange="onCameraDeviceChanged()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition">
-                        <option value="">Enumerating cameras...</option>
-                    </select>
-                </div>
-
-                <!-- Mobile Switch Camera Quick Action Button -->
-                <button onclick="toggleFacingMode()" class="w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-xl text-xs font-medium text-slate-200 transition active:scale-[0.99]">
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-cyan-400"></i>
-                    <span>Toggle Front / Rear Camera</span>
-                </button>
-            </div>
-
-            <!-- Auto Stage Dynamics Controls -->
-            <div class="glass-panel p-5 rounded-2xl space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h2 class="font-semibold text-sm text-slate-200 flex items-center space-x-2">
-                        <i data-lucide="move-3d" class="w-4 h-4 text-fuchsia-400"></i>
-                        <span>Framing Dynamics</span>
-                    </h2>
-                </div>
-
-                <!-- Smoothness / Lerp Speed Slider -->
-                <div class="space-y-2">
-                    <div class="flex justify-between text-xs">
-                        <label for="sliderLerp" class="text-slate-400">Framing Speed (Easing)</label>
-                        <span id="lblLerp" class="font-mono text-cyan-400">0.08</span>
+                <!-- Live Status Badges -->
+                <div class="flex items-center space-x-2 text-xs font-mono">
+                    <div class="hidden sm:flex items-center space-x-2 px-2.5 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                        <span class="relative flex h-2 w-2">
+                            <span id="aiPulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span id="aiDot" class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                        </span>
+                        <span id="statusText" class="text-slate-300 text-[11px]">Initializing...</span>
                     </div>
-                    <input id="sliderLerp" type="range" min="0.02" max="0.30" step="0.01" value="0.08" oninput="updateConfig()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
-                </div>
-
-                <!-- Stage Padding / Zoom Slider -->
-                <div class="space-y-2">
-                    <div class="flex justify-between text-xs">
-                        <label for="sliderPadding" class="text-slate-400">Framing Margin (Zoom)</label>
-                        <span id="lblPadding" class="font-mono text-fuchsia-400">2.2x</span>
+                    <div class="flex items-center space-x-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-400">
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i>
+                        <span><strong id="faceCountBadge" class="text-slate-200">0</strong></span>
                     </div>
-                    <input id="sliderPadding" type="range" min="1.2" max="3.5" step="0.1" value="2.2" oninput="updateConfig()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400">
-                </div>
-            </div>
-
-            <!-- Debug & Telemetry Information Panel -->
-            <div id="telemetryCard" class="glass-panel p-5 rounded-2xl space-y-3 font-mono text-xs">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h2 class="font-semibold text-xs text-slate-300 flex items-center space-x-2">
-                        <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
-                        <span>System Telemetry</span>
-                    </h2>
-                    <span id="telemetryStatus" class="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">LIVE</span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 text-[11px]">
-                    <div class="glass-card p-2.5 rounded-xl space-y-1">
-                        <span class="text-slate-500 block">Cam Resolution</span>
-                        <strong id="dbgCamRes" class="text-slate-200">0x0</strong>
-                    </div>
-                    <div class="glass-card p-2.5 rounded-xl space-y-1">
-                        <span class="text-slate-500 block">Viewport Res</span>
-                        <strong id="dbgCanvasRes" class="text-slate-200">0x0</strong>
-                    </div>
-                    <div class="glass-card p-2.5 rounded-xl space-y-1">
-                        <span class="text-slate-500 block">Visible Crop Box</span>
-                        <strong id="dbgVisibleBox" class="text-amber-300">0,0 - 0x0</strong>
-                    </div>
-                    <div class="glass-card p-2.5 rounded-xl space-y-1">
-                        <span class="text-slate-500 block">Target Crop Box</span>
-                        <strong id="dbgTargetBox" class="text-fuchsia-300">0,0 - 0x0</strong>
+                    <div class="hidden xs:flex items-center space-x-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-400">
+                        <i data-lucide="gauge" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span><strong id="fpsBadge" class="text-slate-200">0</strong></span>
                     </div>
                 </div>
             </div>
+        </header>
 
-        </aside>
-    </main>
+        <!-- Main Content Area: Adapts for Mobile Fullscreen & Desktop Grid -->
+        <main id="mainContainer" class="flex-1 relative w-full h-full overflow-hidden lg:max-w-7xl lg:mx-auto lg:p-6 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
 
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+            <!-- Camera Viewport Container (Full viewport on Mobile, Card on Desktop) -->
+            <section class="relative w-full h-full lg:h-auto lg:col-span-8 flex flex-col justify-center items-center bg-slate-950 overflow-hidden lg:rounded-2xl lg:border lg:border-slate-800 lg:shadow-2xl">
+                
+                <!-- Camera Stage Canvas Area -->
+                <div id="cameraViewport" class="relative w-full h-full lg:aspect-video flex items-center justify-center overflow-hidden bg-black">
+                    
+                    <!-- Hidden Source Video Element -->
+                    <video id="webcam" autoplay playsinline muted class="hidden"></video>
 
-    <!-- JavaScript Application Logic -->
+                    <!-- Render Canvas (Auto-staged) -->
+                    <canvas id="outputCanvas" class="w-full h-full object-contain block"></canvas>
+
+                    <!-- Raw Video Feed (Split View Mode PIP) -->
+                    <div id="splitRawContainer" class="hidden absolute top-4 right-4 w-1/3 max-w-[200px] aspect-video rounded-xl overflow-hidden border border-slate-700/80 shadow-2xl bg-slate-950/80 z-20">
+                        <canvas id="rawCanvas" class="w-full h-full object-cover"></canvas>
+                        <div class="absolute bottom-1 left-2 text-[10px] font-mono font-semibold text-slate-300 bg-slate-950/70 px-1.5 py-0.5 rounded">Raw Input</div>
+                    </div>
+
+                    <!-- Debug Overlay Box Layer -->
+                    <div id="debugOverlayLayer" class="pointer-events-none absolute inset-0 z-10 transition-opacity duration-300 opacity-0">
+                        <div id="dbgPeopleRect" class="absolute border-2 border-dashed border-cyan-400 bg-cyan-500/10 rounded-lg transition-all duration-75 hidden">
+                            <span class="absolute -top-5 left-0 text-[10px] font-mono bg-cyan-500 text-slate-950 font-semibold px-1 py-0.5 rounded shadow">Face</span>
+                        </div>
+                        <div id="dbgTargetRect" class="absolute border-2 border-dashed border-fuchsia-400 bg-fuchsia-500/10 rounded-lg transition-all duration-75 hidden">
+                            <span class="absolute -top-5 right-0 text-[10px] font-mono bg-fuchsia-500 text-slate-950 font-semibold px-1 py-0.5 rounded shadow">Target</span>
+                        </div>
+                        <div id="dbgVisibleRect" class="absolute border-2 border-amber-400 bg-amber-500/5 rounded-lg transition-all duration-75 hidden">
+                            <span class="absolute bottom-1 right-2 text-[10px] font-mono text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded">Crop</span>
+                        </div>
+                    </div>
+
+                    <!-- Loading State Overlay -->
+                    <div id="loadingSpinner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center space-y-4 z-30 transition-opacity duration-300">
+                        <div class="relative flex items-center justify-center">
+                            <div class="w-12 h-12 rounded-full border-2 border-slate-800 border-t-cyan-500 animate-spin"></div>
+                            <i data-lucide="scan-face" class="w-5 h-5 text-cyan-400 absolute"></i>
+                        </div>
+                        <div class="text-center space-y-1 px-4">
+                            <p class="text-sm font-medium text-slate-200" id="loadingMessage">Starting Camera & Neural Engine...</p>
+                            <p class="text-xs text-slate-500">Please grant camera permissions when prompted</p>
+                        </div>
+                    </div>
+
+                    <!-- Floating Quick Controls Toolbar (Mobile & Desktop) -->
+                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center space-x-2 px-3 py-2 rounded-2xl glass-panel shadow-2xl z-20 pb-safe">
+                        
+                        <!-- Camera Flip Switch -->
+                        <button id="btnFlipCamera" title="Switch Camera" onclick="toggleFacingMode()" class="p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow">
+                            <i data-lucide="switch-camera" class="w-4 h-4 text-cyan-400"></i>
+                        </button>
+
+                        <!-- Toggle Auto Stage Framing -->
+                        <button id="btnToggleTracking" title="Toggle Auto Framing" onclick="toggleTracking()" class="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold transition active:scale-95 shadow-lg shadow-cyan-500/20">
+                            <i data-lucide="crosshair" class="w-4 h-4"></i>
+                            <span class="text-xs font-bold" id="btnTrackingLabel">Auto Stage On</span>
+                        </button>
+
+                        <!-- Open Drawer Button (Mobile Only) -->
+                        <button id="btnMobileSettings" title="Camera Settings" onclick="toggleMobileSettingsDrawer()" class="lg:hidden p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow">
+                            <i data-lucide="sliders" class="w-4 h-4 text-fuchsia-400"></i>
+                        </button>
+
+                        <!-- Fullscreen Canvas -->
+                        <button id="btnFullscreen" title="Toggle Fullscreen" onclick="toggleFullscreen()" class="p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow">
+                            <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Orientation Indicator Badge for Mobile -->
+                    <div id="orientationBadge" class="absolute top-4 left-4 px-2.5 py-1 rounded-full glass-card text-[10px] font-mono text-slate-300 flex items-center space-x-1.5 z-20">
+                        <i data-lucide="smartphone" class="w-3 h-3 text-cyan-400"></i>
+                        <span id="orientationText">PORTRAIT</span>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- Controls & Settings Panel (Desktop Sidebar / Mobile Bottom Sheet) -->
+            <aside id="settingsPanel" class="hidden lg:block lg:col-span-4 space-y-5">
+                
+                <!-- Camera Settings Card -->
+                <div class="glass-panel p-5 rounded-2xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h2 class="font-semibold text-sm text-slate-200 flex items-center space-x-2">
+                            <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
+                            <span>Camera Settings</span>
+                        </h2>
+                        <span id="facingBadge" class="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">FRONT</span>
+                    </div>
+
+                    <!-- Camera Device Select Dropdown -->
+                    <div class="space-y-1.5">
+                        <label for="cameraSelect" class="text-xs font-medium text-slate-400 flex items-center justify-between">
+                            <span>Select Video Device</span>
+                            <i data-lucide="camera" class="w-3.5 h-3.5 text-slate-500"></i>
+                        </label>
+                        <select id="cameraSelect" onchange="onCameraDeviceChanged()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition">
+                            <option value="">Enumerating cameras...</option>
+                        </select>
+                    </div>
+
+                    <!-- Quick Switch Camera Button -->
+                    <button onclick="toggleFacingMode()" class="w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-xl text-xs font-medium text-slate-200 transition active:scale-[0.99]">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-cyan-400"></i>
+                        <span>Toggle Front / Rear Camera</span>
+                    </button>
+                </div>
+
+                <!-- Auto Stage Framing Dynamics Controls -->
+                <div class="glass-panel p-5 rounded-2xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h2 class="font-semibold text-sm text-slate-200 flex items-center space-x-2">
+                            <i data-lucide="move-3d" class="w-4 h-4 text-fuchsia-400"></i>
+                            <span>Framing Dynamics</span>
+                        </h2>
+                    </div>
+
+                    <!-- Easing / Lerp Speed Slider -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <label for="sliderLerp" class="text-slate-400">Tracking Speed (Easing)</label>
+                            <span id="lblLerp" class="font-mono text-cyan-400">0.08</span>
+                        </div>
+                        <input id="sliderLerp" type="range" min="0.02" max="0.30" step="0.01" value="0.08" oninput="updateConfig()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                    </div>
+
+                    <!-- Stage Margin / Zoom Slider -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <label for="sliderPadding" class="text-slate-400">Framing Margin (Zoom)</label>
+                            <span id="lblPadding" class="font-mono text-fuchsia-400">2.2x</span>
+                        </div>
+                        <input id="sliderPadding" type="range" min="1.2" max="3.5" step="0.1" value="2.2" oninput="updateConfig()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400">
+                    </div>
+                </div>
+
+                <!-- Telemetry Stats Panel -->
+                <div id="telemetryCard" class="glass-panel p-5 rounded-2xl space-y-3 font-mono text-xs">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h2 class="font-semibold text-xs text-slate-300 flex items-center space-x-2">
+                            <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+                            <span>System Telemetry</span>
+                        </h2>
+                        <span id="telemetryStatus" class="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">LIVE</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-[11px]">
+                        <div class="glass-card p-2.5 rounded-xl space-y-1">
+                            <span class="text-slate-500 block">Cam Sensor</span>
+                            <strong id="dbgCamRes" class="text-slate-200">0x0</strong>
+                        </div>
+                        <div class="glass-card p-2.5 rounded-xl space-y-1">
+                            <span class="text-slate-500 block">Output Canvas</span>
+                            <strong id="dbgCanvasRes" class="text-slate-200">0x0</strong>
+                        </div>
+                        <div class="glass-card p-2.5 rounded-xl space-y-1">
+                            <span class="text-slate-500 block">Active Crop</span>
+                            <strong id="dbgVisibleBox" class="text-amber-300">0,0 - 0x0</strong>
+                        </div>
+                        <div class="glass-card p-2.5 rounded-xl space-y-1">
+                            <span class="text-slate-500 block">Target Crop</span>
+                            <strong id="dbgTargetBox" class="text-fuchsia-300">0,0 - 0x0</strong>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+        </main>
+    </div>
+
+    <!-- Mobile Settings Sheet Overlay Drawer -->
+    <div id="mobileDrawerBackdrop" onclick="toggleMobileSettingsDrawer()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    <div id="mobileDrawer" class="fixed bottom-0 left-0 right-0 glass-panel rounded-t-3xl border-t border-slate-700/80 p-6 z-50 transform translate-y-full transition-transform duration-300 ease-out space-y-5 max-h-[85vh] overflow-y-auto pb-safe">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-fuchsia-400"></i>
+                <h3 class="font-semibold text-sm text-slate-100">Camera & Framing Controls</h3>
+            </div>
+            <button onclick="toggleMobileSettingsDrawer()" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- Camera Select Dropdown (Mobile Drawer) -->
+        <div class="space-y-1.5">
+            <label for="cameraSelectMobile" class="text-xs font-medium text-slate-400">Select Video Device</label>
+            <select id="cameraSelectMobile" onchange="onMobileCameraDeviceChanged()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+                <option value="">Enumerating cameras...</option>
+            </select>
+        </div>
+
+        <!-- Easing Speed Slider (Mobile Drawer) -->
+        <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+                <label class="text-slate-400">Tracking Speed (Easing)</label>
+                <span id="lblLerpMobile" class="font-mono text-cyan-400">0.08</span>
+            </div>
+            <input id="sliderLerpMobile" type="range" min="0.02" max="0.30" step="0.01" value="0.08" oninput="syncConfigFromMobile('lerp')" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+        </div>
+
+        <!-- Framing Margin Slider (Mobile Drawer) -->
+        <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+                <label class="text-slate-400">Framing Margin (Zoom)</label>
+                <span id="lblPaddingMobile" class="font-mono text-fuchsia-400">2.2x</span>
+            </div>
+            <input id="sliderPaddingMobile" type="range" min="1.2" max="3.5" step="0.1" value="2.2" oninput="syncConfigFromMobile('padding')" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400">
+        </div>
+    </div>
+
+    <!-- Toast Notifications Host Container -->
+    <div id="toastContainer" class="fixed top-16 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
     <script>
-        // Configuration and Application State
+        // Global Application State
         const state = {
             viewMode: 'stage', // 'stage', 'debug', 'split'
             isTrackingEnabled: true,
@@ -301,12 +352,13 @@
             currentStream: null,
             detector: null,
             isModelLoaded: false,
+            isMobileDrawerOpen: false,
 
             // Framing Config
             lerpSpeed: 0.08,
             paddingMultiplier: 2.2,
 
-            // Coordinates & Rectangles
+            // Coordinates & Bounds
             cameraRect: { x: 0, y: 0, w: 1280, h: 720 },
             peopleRect: null,
             targetRect: null,
@@ -319,7 +371,7 @@
             detectedFaceCount: 0
         };
 
-        // DOM Element references
+        // DOM Element Cache
         const videoEl = document.getElementById('webcam');
         const outputCanvas = document.getElementById('outputCanvas');
         const outputCtx = outputCanvas.getContext('2d');
@@ -327,12 +379,12 @@
         const rawCtx = rawCanvas.getContext('2d');
 
         const cameraSelect = document.getElementById('cameraSelect');
+        const cameraSelectMobile = document.getElementById('cameraSelectMobile');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const loadingMessage = document.getElementById('loadingMessage');
         const debugOverlayLayer = document.getElementById('debugOverlayLayer');
         const splitRawContainer = document.getElementById('splitRawContainer');
 
-        // Debug visual boxes
         const dbgPeopleRect = document.getElementById('dbgPeopleRect');
         const dbgTargetRect = document.getElementById('dbgTargetRect');
         const dbgVisibleRect = document.getElementById('dbgVisibleRect');
@@ -344,34 +396,46 @@
             const bgColor = type === 'error' ? 'bg-red-950/90 border-red-500/40 text-red-200' : 'bg-slate-900/90 border-slate-700 text-slate-200';
             const icon = type === 'error' ? 'alert-circle' : 'info';
 
-            toast.className = `flex items-center space-x-2 px-4 py-3 rounded-xl border ${bgColor} backdrop-blur-md shadow-2xl text-xs transition-all duration-300 transform translate-y-2 pointer-events-auto`;
-            toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 text-cyan-400"></i><span>${message}</span>`;
+            toast.className = `flex items-center space-x-2 px-3.5 py-2.5 rounded-xl border ${bgColor} backdrop-blur-md shadow-2xl text-xs transition-all duration-300 transform translate-y-2 pointer-events-auto`;
+            toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 text-cyan-400 shrink-0"></i><span>${message}</span>`;
             
             container.appendChild(toast);
             lucide.createIcons();
 
             setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                toast.classList.add('opacity-0', '-translate-y-2');
                 setTimeout(() => toast.remove(), 300);
-            }, 3500);
+            }, 3000);
         }
 
-        // Helper Rectangle Constructor
         const makeRect = (x, y, w, h) => ({ x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) });
-
-        // LERP Linear Interpolation
         const lerp = (start, end, t) => start + (end - start) * t;
 
-        // Initialize Camera Devices
+        // Hide Loader explicitly when stream is ready
+        function hideLoader() {
+            loadingSpinner.classList.add('opacity-0');
+            loadingSpinner.style.pointerEvents = 'none';
+        }
+
+        function showLoader(msg = "Connecting to video source...") {
+            loadingSpinner.classList.remove('opacity-0');
+            loadingSpinner.style.pointerEvents = 'auto';
+            loadingMessage.innerText = msg;
+        }
+
+        // Enumerate Available Webcams
         async function enumerateCameraDevices() {
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = devices.filter(d => d.kind === 'videoinput');
 
                 cameraSelect.innerHTML = '';
+                cameraSelectMobile.innerHTML = '';
                 
                 if (videoDevices.length === 0) {
-                    cameraSelect.innerHTML = '<option value="">No cameras found</option>';
+                    const emptyOpt = '<option value="">No cameras found</option>';
+                    cameraSelect.innerHTML = emptyOpt;
+                    cameraSelectMobile.innerHTML = emptyOpt;
                     return;
                 }
 
@@ -380,7 +444,6 @@
                     option.value = device.deviceId;
                     let label = device.label || `Camera ${index + 1}`;
                     
-                    // Identify Front / Back facing indicators in label
                     const lower = label.toLowerCase();
                     if (lower.includes('back') || lower.includes('rear') || lower.includes('environment')) {
                         label += ' 📷 [Rear]';
@@ -390,25 +453,26 @@
 
                     option.text = label;
                     cameraSelect.appendChild(option);
+                    cameraSelectMobile.appendChild(option.cloneNode(true));
                 });
 
                 if (state.selectedDeviceId) {
                     cameraSelect.value = state.selectedDeviceId;
+                    cameraSelectMobile.value = state.selectedDeviceId;
                 }
             } catch (err) {
                 console.error("Device enumeration error:", err);
             }
         }
 
-        // Start / Switch Camera Stream
+        // Start or Switch Camera Stream
         async function startCameraStream(useDeviceId = null, preferredFacing = null) {
-            loadingSpinner.classList.remove('opacity-0');
-            loadingSpinner.style.pointerEvents = 'auto';
-            loadingMessage.innerText = "Connecting to video source...";
+            showLoader("Connecting to camera stream...");
 
-            // Stop any existing stream first (Critical for Mobile Safari / Android Chrome)
+            // Stop existing stream tracks
             if (state.currentStream) {
                 state.currentStream.getTracks().forEach(track => track.stop());
+                state.currentStream = null;
             }
 
             const constraints = {
@@ -422,17 +486,28 @@
             if (useDeviceId) {
                 constraints.video.deviceId = { exact: useDeviceId };
             } else if (preferredFacing) {
-                constraints.video.facingMode = preferredFacing;
+                constraints.video.facingMode = { exact: preferredFacing };
             } else {
                 constraints.video.facingMode = state.currentFacingMode;
             }
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                let stream;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (exactErr) {
+                    console.warn("Exact facingMode request failed, trying flexible facingMode:", exactErr);
+                    // Fallback to non-exact facingMode constraint
+                    constraints.video.facingMode = preferredFacing || state.currentFacingMode;
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                }
+
                 state.currentStream = stream;
                 videoEl.srcObject = stream;
+                
+                // Force video element playback (critical for Mobile Safari)
+                await videoEl.play().catch(e => console.warn("Video play exception handled:", e));
 
-                // Obtain active track constraints to check actual facing mode
                 const track = stream.getVideoTracks()[0];
                 const settings = track.getSettings();
                 if (settings.facingMode) {
@@ -445,55 +520,66 @@
                 updateUIFacingBadge();
                 await enumerateCameraDevices();
 
+                // If AI model is already initialized, hide loading spinner right away
+                if (state.isModelLoaded) {
+                    hideLoader();
+                }
+
             } catch (error) {
-                console.warn("Exact constraints failed, falling back to basic video request:", error);
+                console.warn("Facing constraint failed, attempting basic video permission:", error);
                 try {
-                    // Fallback to simple video constraint
                     const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                     state.currentStream = fallbackStream;
                     videoEl.srcObject = fallbackStream;
+                    await videoEl.play();
+
+                    if (state.isModelLoaded) hideLoader();
                 } catch (fallbackError) {
-                    showToast("Unable to access camera: " + fallbackError.message, 'error');
+                    showToast("Camera access error: " + fallbackError.message, 'error');
                     loadingMessage.innerText = "Camera access denied or unavailable";
-                    return;
                 }
             }
         }
 
-        // Quick Flip Facing Mode (User <-> Environment)
+        // Toggle Front/Rear Facing Camera
         async function toggleFacingMode() {
             state.currentFacingMode = (state.currentFacingMode === 'user' || state.currentFacingMode.includes('user')) 
                 ? 'environment' 
                 : 'user';
             
-            state.selectedDeviceId = null; // Clear specific device ID to let facingMode take precedence
-            showToast(`Switching camera to ${state.currentFacingMode === 'environment' ? 'Rear (Back)' : 'Front (Selfie)'}...`);
+            state.selectedDeviceId = null;
+            showToast(`Switching to ${state.currentFacingMode === 'environment' ? 'Rear (Back)' : 'Front (Selfie)'} camera...`);
             await startCameraStream(null, state.currentFacingMode);
         }
 
-        // Dropdown Device Change
         async function onCameraDeviceChanged() {
             const deviceId = cameraSelect.value;
             if (!deviceId) return;
             state.selectedDeviceId = deviceId;
-            showToast("Switching to selected video device...");
+            showToast("Switching video device...");
+            await startCameraStream(deviceId);
+        }
+
+        async function onMobileCameraDeviceChanged() {
+            const deviceId = cameraSelectMobile.value;
+            if (!deviceId) return;
+            state.selectedDeviceId = deviceId;
+            showToast("Switching video device...");
             await startCameraStream(deviceId);
         }
 
         function updateUIFacingBadge() {
             const badge = document.getElementById('facingBadge');
-            const mobileFacing = document.getElementById('mobileFacing');
             const isBack = state.currentFacingMode === 'environment' || state.currentFacingMode.includes('back');
             
             badge.innerText = isBack ? 'REAR (BACK)' : 'FRONT (SELFIE)';
             badge.className = `text-[10px] font-mono font-medium px-2 py-0.5 rounded border ${isBack ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'}`;
-            if (mobileFacing) mobileFacing.innerText = isBack ? 'Rear' : 'Front';
         }
 
-        // Load TensorFlow.js Face Detection Model
+        // Initialize TensorFlow / MediaPipe Face Detection
         async function initFaceDetector() {
             try {
-                loadingMessage.innerText = "Loading AI Face Tracking Engine...";
+                showLoader("Loading AI Neural Model...");
                 await tf.ready();
                 
                 const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
@@ -506,13 +592,10 @@
                 state.detector = await faceDetection.createDetector(model, detectorConfig);
                 state.isModelLoaded = true;
 
-                loadingSpinner.classList.add('opacity-0');
-                loadingSpinner.style.pointerEvents = 'none';
-                
+                hideLoader();
                 document.getElementById('statusText').innerText = "AI Tracking Active";
-                showToast("Face tracking engine initialized successfully!");
+                showToast("Face tracking engine initialized!");
 
-                // Start Detection Loop
                 startDetectionLoop();
             } catch (err) {
                 console.error("Error loading face detection model:", err);
@@ -521,31 +604,47 @@
             }
         }
 
-        // On Video Stream Metadata Loaded
+        // Video Metadata Handler & Dynamic Resizing
         videoEl.onloadedmetadata = () => {
-            const w = videoEl.videoWidth || 1280;
-            const h = videoEl.videoHeight || 720;
-
-            state.cameraRect = makeRect(0, 0, w, h);
-            state.visibleRect = makeRect(0, 0, w, h);
-            state.targetRect = makeRect(0, 0, w, h);
-            state.peopleRect = null;
-
-            // Set Canvas internal resolution matching video source
-            outputCanvas.width = w;
-            outputCanvas.height = h;
-            rawCanvas.width = w;
-            rawCanvas.height = h;
-
-            document.getElementById('dbgCamRes').innerText = `${w}x${h}`;
-            document.getElementById('dbgCanvasRes').innerText = `${outputCanvas.clientWidth}x${outputCanvas.clientHeight}`;
+            updateCanvasDimensions();
 
             if (!state.isModelLoaded) {
                 initFaceDetector();
+            } else {
+                hideLoader();
             }
         };
 
-        // Async Loop to continuous estimation of faces
+        // Resize Canvas and Viewport according to screen orientation and size
+        function updateCanvasDimensions() {
+            const camW = videoEl.videoWidth || 1280;
+            const camH = videoEl.videoHeight || 720;
+            state.cameraRect = makeRect(0, 0, camW, camH);
+
+            const viewportContainer = document.getElementById('cameraViewport');
+            const viewportW = viewportContainer.clientWidth || window.innerWidth;
+            const viewportH = viewportContainer.clientHeight || window.innerHeight;
+
+            // Set actual canvas drawing resolution
+            outputCanvas.width = viewportW;
+            outputCanvas.height = viewportH;
+            rawCanvas.width = camW;
+            rawCanvas.height = camH;
+
+            // Update state visible and target rects if uninitialized
+            if (!state.visibleRect) state.visibleRect = makeRect(0, 0, camW, camH);
+            if (!state.targetRect) state.targetRect = makeRect(0, 0, camW, camH);
+
+            // Update Telemetry UI
+            document.getElementById('dbgCamRes').innerText = `${camW}x${camH}`;
+            document.getElementById('dbgCanvasRes').innerText = `${viewportW}x${viewportH}`;
+
+            // Orientation check
+            const isPortrait = window.innerHeight > window.innerWidth;
+            document.getElementById('orientationText').innerText = isPortrait ? 'PORTRAIT' : 'LANDSCAPE';
+        }
+
+        // Asynchronous AI Face Detection Loop
         async function startDetectionLoop() {
             if (!state.detector) return;
 
@@ -555,29 +654,26 @@
                         const faces = await state.detector.estimateFaces(videoEl, { flipHorizontal: false });
                         processDetectedFaces(faces);
                     } catch (e) {
-                        console.warn("Frame detection skipped:", e);
+                        console.warn("Detection frame skipped:", e);
                     }
                 }
-            }, 100); // 10 FPS detection rate is sufficient for smooth staging when coupled with LERP animation
+            }, 100);
         }
 
-        // Process detected face coordinates and calculate target zoom bounding box
+        // Calculate framing coordinates for portrait & landscape aspect ratios
         function processDetectedFaces(faces) {
             state.detectedFaceCount = faces.length;
             document.getElementById('faceCountBadge').innerText = faces.length;
-            document.getElementById('mobileFaceCount').innerText = faces.length;
 
             const camW = state.cameraRect.w;
             const camH = state.cameraRect.h;
 
             if (faces.length === 0) {
-                // If no faces detected, smoothly expand framing back to full camera viewport
                 state.peopleRect = null;
                 state.targetRect = makeRect(0, 0, camW, camH);
                 return;
             }
 
-            // Calculate overall bounding box surrounding ALL detected faces
             let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
             for (const face of faces) {
@@ -595,42 +691,47 @@
 
             state.peopleRect = makeRect(xMin, yMin, faceW, faceH);
 
-            // Compute ideal stage zoom rect based on padding multiplier
+            // Compute ideal stage zoom rect based on active output canvas aspect ratio
+            const canvasAspect = outputCanvas.width / outputCanvas.height;
             const mult = state.paddingMultiplier;
-            let targetH = Math.max(faceH * mult, camH * 0.35); // Keep a minimum threshold
-            let targetW = targetH * (camW / camH); // Maintain aspect ratio
 
-            // Ensure bounding box does not exceed full video dimensions
-            if (targetW > camW || targetH > camH) {
+            let targetH = Math.max(faceH * mult, camH * 0.3);
+            let targetW = targetH * canvasAspect;
+
+            // Clamp bounds if calculated crop box exceeds camera sensor dimension limits
+            if (targetW > camW) {
                 targetW = camW;
+                targetH = targetW / canvasAspect;
+            }
+            if (targetH > camH) {
                 targetH = camH;
+                targetW = targetH * canvasAspect;
             }
 
-            // Center target around face centroid with smooth offset (slightly higher than center for headroom)
+            // Center target around detected face centroid
             let targetX = faceCenterX - targetW / 2;
-            let targetY = faceCenterY - targetH * 0.45;
+            let targetY = faceCenterY - targetH * 0.45; // Headroom offset
 
-            // Clamp bounds to prevent panning outside the video boundaries
+            // Keep within video boundary limits
             targetX = Math.max(0, Math.min(camW - targetW, targetX));
             targetY = Math.max(0, Math.min(camH - targetH, targetY));
 
             state.targetRect = makeRect(targetX, targetY, targetW, targetH);
         }
 
-        // Main Animation & Canvas Rendering Loop (60 FPS)
+        // High Performance Render Loop (60 FPS)
         function renderLoop(timestamp) {
-            // Calculate FPS
+            // FPS calculation
             state.frameCount++;
             if (timestamp - state.lastFrameTime >= 1000) {
                 state.fps = state.frameCount;
                 state.frameCount = 0;
                 state.lastFrameTime = timestamp;
                 document.getElementById('fpsBadge').innerText = state.fps;
-                document.getElementById('mobileFps').innerText = state.fps;
             }
 
             if (videoEl.readyState >= 2) {
-                // Perform LERP interpolation for smooth camera panning & zoom
+                // Smooth LERP camera movement
                 if (state.targetRect && state.visibleRect && state.isTrackingEnabled) {
                     state.visibleRect.x = lerp(state.visibleRect.x, state.targetRect.x, state.lerpSpeed);
                     state.visibleRect.y = lerp(state.visibleRect.y, state.targetRect.y, state.lerpSpeed);
@@ -640,21 +741,21 @@
 
                 const v = state.visibleRect || state.cameraRect;
 
-                // Render Cropped & Auto-Staged View onto Main Canvas
+                // Render cropped view onto canvas
                 outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
                 outputCtx.drawImage(
                     videoEl,
-                    v.x, v.y, v.w, v.h,               // Source crop box
-                    0, 0, outputCanvas.width, outputCanvas.height // Destination full canvas
+                    v.x, v.y, v.w, v.h,
+                    0, 0, outputCanvas.width, outputCanvas.height
                 );
 
-                // If in Split View Mode, render the full uncropped camera feed in corner canvas
+                // Render Split view PIP raw canvas
                 if (state.viewMode === 'split') {
                     rawCtx.clearRect(0, 0, rawCanvas.width, rawCanvas.height);
                     rawCtx.drawImage(videoEl, 0, 0, rawCanvas.width, rawCanvas.height);
                 }
 
-                // Update Debug UI Telemetry
+                // Render debug boxes
                 if (state.viewMode === 'debug') {
                     updateDebugOverlayUI();
                 }
@@ -663,7 +764,7 @@
             requestAnimationFrame(renderLoop);
         }
 
-        // Update CSS positions of Debug Overlay Bounding Boxes
+        // Update Debug Layer Positions
         function updateDebugOverlayUI() {
             const canvasW = outputCanvas.clientWidth;
             const canvasH = outputCanvas.clientHeight;
@@ -694,7 +795,7 @@
             }
         }
 
-        // View Mode Switcher Handlers
+        // Switch Display View Modes
         function setViewMode(mode) {
             state.viewMode = mode;
 
@@ -702,55 +803,65 @@
             const tabDebug = document.getElementById('tabDebug');
             const tabSplit = document.getElementById('tabSplit');
 
-            const inactiveClass = "flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all duration-200";
-            const activeClass = "flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 bg-cyan-500 text-slate-950 font-semibold shadow-md shadow-cyan-500/20";
+            const inactiveClass = "flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 rounded-lg text-slate-400 hover:text-slate-200 transition-all duration-200";
+            const activeClass = "flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 rounded-lg transition-all duration-200 bg-cyan-500 text-slate-950 font-semibold shadow-md shadow-cyan-500/20";
 
             tabStage.className = mode === 'stage' ? activeClass : inactiveClass;
             tabDebug.className = mode === 'debug' ? activeClass : inactiveClass;
             tabSplit.className = mode === 'split' ? activeClass : inactiveClass;
 
-            // Toggle Debug Overlay layer
             if (mode === 'debug') {
                 debugOverlayLayer.classList.remove('opacity-0');
                 debugOverlayLayer.classList.add('opacity-100');
             } else {
                 debugOverlayLayer.classList.remove('opacity-100');
                 debugOverlayLayer.classList.add('opacity-0');
-                dbgPeopleRect.classList.add('hidden');
-                dbgTargetRect.classList.add('hidden');
-                dbgVisibleRect.classList.add('hidden');
             }
 
-            // Toggle Split View canvas
             if (mode === 'split') {
                 splitRawContainer.classList.remove('hidden');
             } else {
                 splitRawContainer.classList.add('hidden');
             }
 
-            showToast(`Switched view mode to: ${mode.toUpperCase()}`);
+            showToast(`Switched view: ${mode.toUpperCase()}`);
         }
 
-        // Toggle Dynamic Auto Tracking On/Off
+        // Toggle Dynamic Auto Framing
         function toggleTracking() {
             state.isTrackingEnabled = !state.isTrackingEnabled;
             const btnLabel = document.getElementById('btnTrackingLabel');
             btnLabel.innerText = state.isTrackingEnabled ? "Auto Stage On" : "Auto Stage Off";
-            showToast(state.isTrackingEnabled ? "Auto framing enabled" : "Auto framing paused");
+            showToast(state.isTrackingEnabled ? "Auto framing active" : "Auto framing paused");
+        }
+
+        // Mobile Settings Drawer Toggle
+        function toggleMobileSettingsDrawer() {
+            state.isMobileDrawerOpen = !state.isMobileDrawerOpen;
+            const drawer = document.getElementById('mobileDrawer');
+            const backdrop = document.getElementById('mobileDrawerBackdrop');
+
+            if (state.isMobileDrawerOpen) {
+                backdrop.classList.remove('opacity-0', 'pointer-events-none');
+                drawer.classList.remove('translate-y-full');
+            } else {
+                backdrop.classList.add('opacity-0', 'pointer-events-none');
+                drawer.classList.add('translate-y-full');
+            }
         }
 
         // Fullscreen Toggle
         function toggleFullscreen() {
+            const elem = document.getElementById('cameraViewport');
             if (!document.fullscreenElement) {
-                outputCanvas.requestFullscreen().catch(err => {
-                    showToast("Error attempting fullscreen: " + err.message, 'error');
-                });
+                if (elem.requestFullscreen) elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
             } else {
-                document.exitFullscreen();
+                if (document.exitFullscreen) document.exitFullscreen();
             }
         }
 
-        // Update Configuration from Controls Sliders
+        // Sync Controls Configuration
         function updateConfig() {
             const lerpVal = parseFloat(document.getElementById('sliderLerp').value);
             const padVal = parseFloat(document.getElementById('sliderPadding').value);
@@ -760,24 +871,37 @@
 
             document.getElementById('lblLerp').innerText = lerpVal.toFixed(2);
             document.getElementById('lblPadding').innerText = padVal.toFixed(1) + 'x';
+
+            // Sync Mobile controls UI
+            document.getElementById('sliderLerpMobile').value = lerpVal;
+            document.getElementById('sliderPaddingMobile').value = padVal;
+            document.getElementById('lblLerpMobile').innerText = lerpVal.toFixed(2);
+            document.getElementById('lblPaddingMobile').innerText = padVal.toFixed(1) + 'x';
         }
 
-        // Window Resize Handler
-        window.addEventListener('resize', () => {
-            if (outputCanvas) {
-                document.getElementById('dbgCanvasRes').innerText = `${outputCanvas.clientWidth}x${outputCanvas.clientHeight}`;
+        function syncConfigFromMobile(type) {
+            if (type === 'lerp') {
+                const val = parseFloat(document.getElementById('sliderLerpMobile').value);
+                document.getElementById('sliderLerp').value = val;
+            } else {
+                const val = parseFloat(document.getElementById('sliderPaddingMobile').value);
+                document.getElementById('sliderPadding').value = val;
             }
+            updateConfig();
+        }
+
+        // Resize and Orientation Event Listeners
+        window.addEventListener('resize', updateCanvasDimensions);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateCanvasDimensions, 200);
         });
 
-        // Application Initialization Entrypoint
+        // Application Entry Point
         window.onload = async () => {
             lucide.createIcons();
             showToast("Initializing video pipeline...");
             
-            // Request user camera access
             await startCameraStream();
-
-            // Kick off high performance canvas render loop
             requestAnimationFrame(renderLoop);
         };
     </script>
