@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nível Digital Professional</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        levelGreen: {
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            glow: 'rgba(34, 197, 94, 0.4)'
+                        },
+                        levelBlue: {
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            glow: 'rgba(14, 165, 233, 0.3)'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'ping-once': 'ping 0.6s cubic-bezier(0, 0, 0.2, 1) 1',
+                        'ripple': 'ripple 1.5s ease-out infinite',
+                    },
+                    keyframes: {
+                        ripple: {
+                            '0%': { transform: 'scale(0.8)', opacity: '1' },
+                            '100%': { transform: 'scale(2.2)', opacity: '0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        
+        body {
+            background-color: #0b0f17;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: rgba(18, 24, 38, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-btn:active {
+            transform: scale(0.95);
+        }
+
+        .level-glow-green {
+            box-shadow: 0 0 50px -5px rgba(34, 197, 94, 0.4);
+        }
+
+        .level-glow-blue {
+            box-shadow: 0 0 35px -5px rgba(14, 165, 233, 0.25);
+        }
+
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            height: 6px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #0ea5e9;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-3 sm:p-6 font-sans select-none antialiased">
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 transform -translate-y-16 opacity-0 transition-all duration-300 pointer-events-none px-5 py-2.5 rounded-full glass-card border border-slate-700/60 shadow-2xl flex items-center gap-3">
+        <i id="toastIcon" class="fa-solid fa-circle-info text-sky-400"></i>
+        <span id="toastMsg" class="text-xs sm:text-sm font-semibold tracking-wide text-slate-200">Mensagem</span>
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-md flex-1 flex flex-col justify-between gap-4 py-2">
+        
+        <!-- Header / Status Bar -->
+        <header class="glass-card rounded-2xl p-4 flex items-center justify-between shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-600 flex items-center justify-center text-white shadow-lg shadow-emerald-900/30">
+                    <i class="fa-solid fa-bullseye text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+                        Nível Digital
+                        <span class="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Pro</span>
+                    </h1>
+                    <p id="sensorStatusText" class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="statusDot"></span>
+                        Aguardando sensor...
+                    </p>
+                </div>
+            </div>
+
+            <!-- Header Quick Actions -->
+            <div class="flex items-center gap-2">
+                <button id="audioToggleBtn" class="glass-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:text-white" title="Alternar Sinal Sonoro">
+                    <i class="fa-solid fa-volume-xmark text-sm" id="audioIcon"></i>
+                </button>
+                <button id="settingsToggleBtn" class="glass-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:text-white" title="Configurações">
+                    <i class="fa-solid fa-sliders text-sm"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mode Selector Switcher -->
+        <div class="glass-card p-1.5 rounded-xl flex gap-1 text-xs font-semibold">
+            <button id="mode2DBtn" class="flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 bg-sky-600 text-white shadow-md">
+                <i class="fa-solid fa-[#000] fa-bullseye"></i> 2D Superfície
+            </button>
+            <button id="modeHorizBtn" class="flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-left-right"></i> Horizontal
+            </button>
+            <button id="modeVertBtn" class="flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-up-down"></i> Vertical
+            </button>
+        </div>
+
+        <!-- Center Interactive Level Stage -->
+        <main class="relative flex-1 min-h-[300px] sm:min-h-[340px] flex flex-col items-center justify-center my-2">
+            
+            <!-- Target Outer Ring Base with Adaptive Glow -->
+            <div id="levelContainer" class="relative w-72 h-72 sm:w-80 sm:h-80 rounded-full glass-card p-4 flex items-center justify-center transition-all duration-300 shadow-2xl level-glow-blue border border-slate-700/50">
+                
+                <!-- HTML / Canvas Visualizer -->
+                <canvas id="levelCanvas" class="w-full h-full rounded-full cursor-grab active:cursor-grabbing"></canvas>
+
+                <!-- On-Screen Ripple Effect when 0.0° level achieved -->
+                <div id="levelRipple" class="absolute inset-0 rounded-full border-2 border-emerald-400 opacity-0 pointer-events-none"></div>
+
+                <!-- Sensor Permission Prompt Overlay (for iOS / HTTPS compliance) -->
+                <div id="permissionOverlay" class="absolute inset-0 rounded-full bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                    <div class="w-12 h-12 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-mobile-screen-button text-xl"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-white mb-1">Ativar Sensores de Movimento</h3>
+                    <p class="text-xs text-slate-400 mb-4 max-w-[200px]">É necessário autorizar o giroscópio do dispositivo para medir inclinações.</p>
+                    <button id="enableSensorsBtn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-xs shadow-lg shadow-sky-500/30 hover:opacity-90 active:scale-95 transition-all">
+                        Ativar Giroscópio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Angle Degree Readouts HUD -->
+            <div class="mt-4 w-full flex items-center justify-between px-2 gap-3">
+                
+                <!-- X / Roll Card -->
+                <div class="flex-1 glass-card p-3 rounded-2xl flex flex-col items-center border border-slate-800">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <i class="fa-solid fa-arrows-left-right text-sky-400"></i> Roll (X)
+                    </span>
+                    <span id="degX" class="text-lg sm:text-xl font-extrabold font-mono text-slate-100 mt-0.5">0.0°</span>
+                </div>
+
+                <!-- Main Status / Pitch Total -->
+                <div id="centerDegreeBox" class="flex-1 glass-card p-3 rounded-2xl flex flex-col items-center border border-sky-500/30 bg-sky-950/20 transition-all duration-300">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400" id="mainDegreeLabel">Desvio Total</span>
+                    <span id="degTotal" class="text-2xl sm:text-3xl font-black font-mono text-sky-400 mt-0.5">0.0°</span>
+                </div>
+
+                <!-- Y / Pitch Card -->
+                <div class="flex-1 glass-card p-3 rounded-2xl flex flex-col items-center border border-slate-800">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <i class="fa-solid fa-arrows-up-down text-sky-400"></i> Pitch (Y)
+                    </span>
+                    <span id="degY" class="text-lg sm:text-xl font-extrabold font-mono text-slate-100 mt-0.5">0.0°</span>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Bottom Action Bar Controls -->
+        <footer class="flex items-center gap-2">
+            <!-- Calibrate (Set Zero) -->
+            <button id="calibrateBtn" class="flex-1 glass-btn py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 text-slate-200 hover:text-white hover:bg-slate-800/80">
+                <i class="fa-solid fa-crosshairs text-sky-400"></i> Calibrar (Zerar)
+            </button>
+
+            <!-- Hold / Lock Angle -->
+            <button id="holdBtn" class="glass-btn py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 text-slate-200 hover:text-white hover:bg-slate-800/80">
+                <i class="fa-solid fa-lock text-slate-400" id="holdIcon"></i>
+                <span id="holdText">Travar</span>
+            </button>
+
+            <!-- Reset Calibration -->
+            <button id="resetCalibBtn" class="glass-btn py-3 px-3 rounded-xl font-bold text-xs text-slate-400 hover:text-red-400 hover:bg-red-950/20" title="Resetar Calibração de Fábrica">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+        </footer>
+
+        <!-- Desktop / Mouse Interactive Controls Drawer (Shown if no sensor detected or requested) -->
+        <div id="simulationDrawer" class="glass-card p-3 rounded-2xl border border-dashed border-slate-700/80 text-xs">
+            <div class="flex items-center justify-between mb-2">
+                <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-computer text-sky-400"></i> Modo Simulação (Desktop / Mouse)
+                </span>
+                <span class="text-[10px] text-slate-500">Arraste no alvo ou use os sliders</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                        <span>Eixo X (Roll):</span>
+                        <span id="simXVal" class="font-mono font-bold text-sky-400">0.0°</span>
+                    </div>
+                    <input type="range" id="simSliderX" min="-45" max="45" step="0.1" value="0" class="w-full">
+                </div>
+                <div>
+                    <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                        <span>Eixo Y (Pitch):</span>
+                        <span id="simYVal" class="font-mono font-bold text-sky-400">0.0°</span>
+                    </div>
+                    <input type="range" id="simSliderY" min="-45" max="45" step="0.1" value="0" class="w-full">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass-card w-full max-w-sm rounded-3xl p-6 border border-slate-700 shadow-2xl transform scale-95 transition-all duration-300" id="settingsModalCard">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-sky-400"></i> Ajustes do Nível
+                </h3>
+                <button id="closeSettingsBtn" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <!-- Tolerance setting -->
+                <div>
+                    <div class="flex justify-between mb-1.5 font-semibold">
+                        <span class="text-slate-300">Tolerância do Nível (Verde)</span>
+                        <span id="toleranceVal" class="text-sky-400 font-mono">0.5°</span>
+                    </div>
+                    <input type="range" id="toleranceRange" min="0.1" max="2.0" step="0.1" value="0.5" class="w-full">
+                    <p class="text-[10px] text-slate-500 mt-1">Margem de erro permitida para considerar o dispositivo nivelado.</p>
+                </div>
+
+                <!-- Damping / Smoothing -->
+                <div>
+                    <div class="flex justify-between mb-1.5 font-semibold">
+                        <span class="text-slate-300">Amortecimento (Suavização)</span>
+                        <span id="dampingVal" class="text-sky-400 font-mono">Médio</span>
+                    </div>
+                    <input type="range" id="dampingRange" min="0.05" max="0.5" step="0.05" value="0.2" class="w-full">
+                    <p class="text-[10px] text-slate-500 mt-1">Reduz o tremor da mão nos dados do acelerômetro.</p>
+                </div>
+
+                <!-- Haptic vibration toggle -->
+                <div class="flex items-center justify-between py-2 border-t border-slate-800">
+                    <span class="font-semibold text-slate-300">Vibração Háptica ao Nivelar</span>
+                    <input type="checkbox" id="vibrateToggle" checked class="w-4 h-4 accent-sky-500 cursor-pointer">
+                </div>
+
+                <!-- Continuous Sound Toggle -->
+                <div class="flex items-center justify-between py-2 border-t border-slate-800">
+                    <div>
+                        <div class="font-semibold text-slate-300">Modo de Som Guiado</div>
+                        <div class="text-[10px] text-slate-500">Tom contínuo muda de tom ao se aproximar de 0°</div>
+                    </div>
+                    <input type="checkbox" id="pitchAudioToggle" class="w-4 h-4 accent-sky-500 cursor-pointer">
+                </div>
+            </div>
+
+            <button id="saveSettingsBtn" class="w-full mt-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg transition-all">
+                Concluído
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- APPLICATION STATE ---
+        const state = {
+            mode: '2D', // '2D', 'HORIZONTAL', 'VERTICAL'
+            rawX: 0,
+            rawY: 0,
+            filteredX: 0,
+            filteredY: 0,
+            offsetX: 0,
+            offsetY: 0,
+            isLocked: false,
+            lockedX: 0,
+            lockedY: 0,
+            tolerance: 0.5, // degrees
+            dampingFactor: 0.2, // smoothing
+            soundEnabled: false,
+            pitchSoundEnabled: false,
+            vibrateEnabled: true,
+            isLevelLocked: false,
+            usingSim: false,
+            hasSensorEvent: false,
+            canvasWidth: 300,
+            canvasHeight: 300,
+            // Drag simulation
+            isDragging: false
+        };
+
+        // DOM Element References
+        const canvas = document.getElementById('levelCanvas');
+        const ctx = canvas.getContext('2d');
+        const levelContainer = document.getElementById('levelContainer');
+        const levelRipple = document.getElementById('levelRipple');
+        const permissionOverlay = document.getElementById('permissionOverlay');
+        const enableSensorsBtn = document.getElementById('enableSensorsBtn');
+        const sensorStatusText = document.getElementById('sensorStatusText');
+        const statusDot = document.getElementById('statusDot');
+
+        // Readouts
+        const degXEl = document.getElementById('degX');
+        const degYEl = document.getElementById('degY');
+        const degTotalEl = document.getElementById('degTotal');
+        const centerDegreeBox = document.getElementById('centerDegreeBox');
+        const mainDegreeLabel = document.getElementById('mainDegreeLabel');
+
+        // Buttons
+        const mode2DBtn = document.getElementById('mode2DBtn');
+        const modeHorizBtn = document.getElementById('modeHorizBtn');
+        const modeVertBtn = document.getElementById('modeVertBtn');
+        const calibrateBtn = document.getElementById('calibrateBtn');
+        const resetCalibBtn = document.getElementById('resetCalibBtn');
+        const holdBtn = document.getElementById('holdBtn');
+        const holdIcon = document.getElementById('holdIcon');
+        const holdText = document.getElementById('holdText');
+        const audioToggleBtn = document.getElementById('audioToggleBtn');
+        const audioIcon = document.getElementById('audioIcon');
+
+        // Simulation Controls
+        const simSliderX = document.getElementById('simSliderX');
+        const simSliderY = document.getElementById('simSliderY');
+        const simXVal = document.getElementById('simXVal');
+        const simYVal = document.getElementById('simYVal');
+
+        // Settings Modal Controls
+        const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsModalCard = document.getElementById('settingsModalCard');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        const toleranceRange = document.getElementById('toleranceRange');
+        const toleranceVal = document.getElementById('toleranceVal');
+        const dampingRange = document.getElementById('dampingRange');
+        const dampingVal = document.getElementById('dampingVal');
+        const vibrateToggle = document.getElementById('vibrateToggle');
+        const pitchAudioToggle = document.getElementById('pitchAudioToggle');
+
+        // Audio Context Synthesizer setup
+        let audioCtx = null;
+        let pitchOscillator = null;
+        let pitchGainNode = null;
+
+        // Initialize Web Audio API
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playLevelBeep() {
+            if (!state.soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+                osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.15); // E6 note
+
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } catch (e) {
+                console.warn('Audio play error', e);
+            }
+        }
+
+        // Continuous Pitch Sound when approaching 0°
+        function updateContinuousPitchSound(totalAngle) {
+            if (!state.soundEnabled || !state.pitchSoundEnabled) {
+                stopContinuousPitch();
+                return;
+            }
+
+            initAudio();
+            if (!audioCtx) return;
+
+            if (totalAngle < 15) {
+                if (!pitchOscillator) {
+                    pitchOscillator = audioCtx.createOscillator();
+                    pitchGainNode = audioCtx.createGain();
+                    pitchOscillator.type = 'sine';
+                    pitchGainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    pitchOscillator.connect(pitchGainNode);
+                    pitchGainNode.connect(audioCtx.destination);
+                    pitchOscillator.start();
+                }
+
+                // Map angle 0 - 15 deg to frequency 1200Hz - 300Hz
+                const targetFreq = 1200 - (totalAngle / 15) * 900;
+                pitchOscillator.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.05);
+            } else {
+                stopContinuousPitch();
+            }
+        }
+
+        function stopContinuousPitch() {
+            if (pitchOscillator) {
+                try {
+                    pitchOscillator.stop();
+                    pitchOscillator.disconnect();
+                } catch(e) {}
+                pitchOscillator = null;
+                pitchGainNode = null;
+            }
+        }
+
+        // Toast Feedback Message
+        function showToast(message, iconClass = 'fa-circle-info', iconColor = 'text-sky-400') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = message;
+            toastIcon.className = `fa-solid ${iconClass} ${iconColor}`;
+
+            toast.classList.remove('-translate-y-16', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => {
+                toast.classList.add('-translate-y-16', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 2500);
+        }
+
+        // Canvas Setup & DPI Scaling
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            state.canvasWidth = canvas.width;
+            state.canvasHeight = canvas.height;
+            ctx.scale(dpr, dpr);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // Core Render Loop
+        function renderLevel() {
+            const width = canvas.getBoundingClientRect().width;
+            const height = canvas.getBoundingClientRect().height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = width / 2 - 10;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Compute current active angle (considering hold / lock)
+            let curX = state.isLocked ? state.lockedX : (state.filteredX - state.offsetX);
+            let curY = state.isLocked ? state.lockedY : (state.filteredY - state.offsetY);
+
+            // Calculate total angle deviation from zero
+            let totalDev = 0;
+            if (state.mode === '2D') {
+                totalDev = Math.sqrt(curX * curX + curY * curY);
+            } else if (state.mode === 'HORIZONTAL') {
+                totalDev = Math.abs(curX);
+            } else if (state.mode === 'VERTICAL') {
+                totalDev = Math.abs(curY);
+            }
+
+            const isLevel = totalDev <= state.tolerance;
+
+            // Trigger level-locked feedback if state transitioned to level
+            if (isLevel && !state.isLevelLocked) {
+                state.isLevelLocked = true;
+                playLevelBeep();
+                if (state.vibrateEnabled && navigator.vibrate) {
+                    navigator.vibrate([40, 30, 40]);
+                }
+                triggerRippleAnimation();
+            } else if (!isLevel) {
+                state.isLevelLocked = false;
+            }
+
+            // Audio pitch update
+            updateContinuousPitchSound(totalDev);
+
+            // Dynamic Styling Updates for UI
+            updateUIThemeAndReadouts(curX, curY, totalDev, isLevel);
+
+            // Draw Level graphics based on mode
+            if (state.mode === '2D') {
+                draw2DBullseye(centerX, centerY, radius, curX, curY, isLevel);
+            } else if (state.mode === 'HORIZONTAL') {
+                draw1DHorizontalTube(width, height, curX, isLevel);
+            } else if (state.mode === 'VERTICAL') {
+                draw1DVerticalTube(width, height, curY, isLevel);
+            }
+
+            requestAnimationFrame(renderLevel);
+        }
+
+        // Draw 2D Circular Level (Target Bullseye)
+        function draw2DBullseye(cx, cy, radius, degX, degY, isLevel) {
+            const maxDegrees = 30; // Max visual degrees mapping to edge
+            const scale = (radius - 24) / maxDegrees;
+
+            // Bubble Position calculation
+            let bubbleX = cx + (degX * scale);
+            let bubbleY = cy + (degY * scale);
+
+            // Constrain bubble within circle outer limit
+            const distFromCenter = Math.sqrt((bubbleX - cx)**2 + (bubbleY - cy)**2);
+            const maxBubbleDist = radius - 26;
+            if (distFromCenter > maxBubbleDist) {
+                const angle = Math.atan2(bubbleY - cy, bubbleX - cx);
+                bubbleX = cx + Math.cos(angle) * maxBubbleDist;
+                bubbleY = cy + Math.sin(angle) * maxBubbleDist;
+            }
+
+            // Outer Frame Ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius - 2, 0, Math.PI * 2);
+            ctx.strokeStyle = isLevel ? '#22c55e' : 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Concentric Target Rings (Degrees: 1°, 5°, 10°, 20°)
+            const rings = [1, 5, 10, 20];
+            rings.forEach(ringDeg => {
+                const r = ringDeg * scale;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = ringDeg === 1 ? (isLevel ? 'rgba(34, 197, 94, 0.6)' : 'rgba(14, 165, 233, 0.5)') : 'rgba(255, 255, 255, 0.08)';
+                ctx.lineWidth = ringDeg === 1 ? 2 : 1;
+                ctx.setLineDash(ringDeg > 5 ? [4, 4] : []);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+
+            // Crosshair Axes
+            ctx.beginPath();
+            ctx.moveTo(cx - radius + 15, cy);
+            ctx.lineTo(cx + radius - 15, cy);
+            ctx.moveTo(cx, cy - radius + 15);
+            ctx.lineTo(cx, cy + radius - 15);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Center Target Cross Circle
+            const centerTargetR = state.tolerance * scale * 1.8;
+            ctx.beginPath();
+            ctx.arc(cx, cy, Math.max(10, centerTargetR), 0, Math.PI * 2);
+            ctx.fillStyle = isLevel ? 'rgba(34, 197, 94, 0.25)' : 'rgba(14, 165, 233, 0.1)';
+            ctx.fill();
+            ctx.strokeStyle = isLevel ? '#22c55e' : '#0ea5e9';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw Liquid Bubble
+            const bubbleRadius = 22;
+            const bubbleGradient = ctx.createRadialGradient(
+                bubbleX - 5, bubbleY - 5, 2,
+                bubbleX, bubbleY, bubbleRadius
+            );
+
+            if (isLevel) {
+                bubbleGradient.addColorStop(0, '#86efac');
+                bubbleGradient.addColorStop(0.5, '#22c55e');
+                bubbleGradient.addColorStop(1, '#15803d');
+            } else {
+                bubbleGradient.addColorStop(0, '#7dd3fc');
+                bubbleGradient.addColorStop(0.5, '#0ea5e9');
+                bubbleGradient.addColorStop(1, '#0369a1');
+            }
+
+            // Bubble Shadow
+            ctx.beginPath();
+            ctx.arc(bubbleX + 2, bubbleY + 3, bubbleRadius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            ctx.fill();
+
+            // Bubble Main Body
+            ctx.beginPath();
+            ctx.arc(bubbleX, bubbleY, bubbleRadius, 0, Math.PI * 2);
+            ctx.fillStyle = bubbleGradient;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Bubble Highlight Glare
+            ctx.beginPath();
+            ctx.ellipse(bubbleX - 7, bubbleY - 7, 7, 3.5, -Math.PI / 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.fill();
+        }
+
+        // Draw 1D Horizontal Tube Level
+        function draw1DHorizontalTube(w, h, degX, isLevel) {
+            const cx = w / 2;
+            const cy = h / 2;
+            const tubeW = w * 0.8;
+            const tubeH = 50;
+            const maxDeg = 25;
+            const scale = (tubeW / 2 - 30) / maxDeg;
+
+            let bx = cx + (degX * scale);
+            bx = Math.max(cx - tubeW/2 + 25, Math.min(cx + tubeW/2 - 25, bx));
+
+            // Tube Outer Frame
+            ctx.beginPath();
+            ctx.roundRect(cx - tubeW/2, cy - tubeH/2, tubeW, tubeH, 25);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+            ctx.fill();
+            ctx.strokeStyle = isLevel ? '#22c55e' : 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Center Target Lines
+            const centerMargin = state.tolerance * scale + 15;
+            ctx.beginPath();
+            ctx.moveTo(cx - centerMargin, cy - tubeH/2 + 4);
+            ctx.lineTo(cx - centerMargin, cy + tubeH/2 - 4);
+            ctx.moveTo(cx + centerMargin, cy - tubeH/2 + 4);
+            ctx.lineTo(cx + centerMargin, cy + tubeH/2 - 4);
+            ctx.strokeStyle = isLevel ? '#22c55e' : '#0ea5e9';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // Horizontal Bubble
+            const bRadius = 20;
+            const bGrad = ctx.createRadialGradient(bx - 3, cy - 3, 2, bx, cy, bRadius);
+            if (isLevel) {
+                bGrad.addColorStop(0, '#86efac');
+                bGrad.addColorStop(1, '#16a34a');
+            } else {
+                bGrad.addColorStop(0, '#7dd3fc');
+                bGrad.addColorStop(1, '#0284c7');
+            }
+
+            ctx.beginPath();
+            ctx.arc(bx, cy, bRadius, 0, Math.PI * 2);
+            ctx.fillStyle = bGrad;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Draw 1D Vertical Tube Level
+        function draw1DVerticalTube(w, h, degY, isLevel) {
+            const cx = w / 2;
+            const cy = h / 2;
+            const tubeW = 50;
+            const tubeH = h * 0.8;
+            const maxDeg = 25;
+            const scale = (tubeH / 2 - 30) / maxDeg;
+
+            let by = cy + (degY * scale);
+            by = Math.max(cy - tubeH/2 + 25, Math.min(cy + tubeH/2 - 25, by));
+
+            // Vertical Tube Outer Frame
+            ctx.beginPath();
+            ctx.roundRect(cx - tubeW/2, cy - tubeH/2, tubeW, tubeH, 25);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+            ctx.fill();
+            ctx.strokeStyle = isLevel ? '#22c55e' : 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Center Target Lines
+            const centerMargin = state.tolerance * scale + 15;
+            ctx.beginPath();
+            ctx.moveTo(cx - tubeW/2 + 4, cy - centerMargin);
+            ctx.lineTo(cx + tubeW/2 - 4, cy - centerMargin);
+            ctx.moveTo(cx - tubeW/2 + 4, cy + centerMargin);
+            ctx.lineTo(cx + tubeW/2 - 4, cy + centerMargin);
+            ctx.strokeStyle = isLevel ? '#22c55e' : '#0ea5e9';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // Vertical Bubble
+            const bRadius = 20;
+            const bGrad = ctx.createRadialGradient(cx - 3, by - 3, 2, cx, by, bRadius);
+            if (isLevel) {
+                bGrad.addColorStop(0, '#86efac');
+                bGrad.addColorStop(1, '#16a34a');
+            } else {
+                bGrad.addColorStop(0, '#7dd3fc');
+                bGrad.addColorStop(1, '#0284c7');
+            }
+
+            ctx.beginPath();
+            ctx.arc(cx, by, bRadius, 0, Math.PI * 2);
+            ctx.fillStyle = bGrad;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Update Text Readouts & Responsive Styles
+        function updateUIThemeAndReadouts(x, y, total, isLevel) {
+            degXEl.textContent = `${x.toFixed(1)}°`;
+            degYEl.textContent = `${y.toFixed(1)}°`;
+            degTotalEl.textContent = `${total.toFixed(1)}°`;
+
+            if (isLevel) {
+                levelContainer.className = "relative w-72 h-72 sm:w-80 sm:h-80 rounded-full glass-card p-4 flex items-center justify-center transition-all duration-300 shadow-2xl level-glow-green border border-emerald-500/60";
+                centerDegreeBox.className = "flex-1 glass-card p-3 rounded-2xl flex flex-col items-center border border-emerald-500/60 bg-emerald-950/30 transition-all duration-300";
+                degTotalEl.className = "text-2xl sm:text-3xl font-black font-mono text-emerald-400 mt-0.5 animate-pulse-slow";
+                mainDegreeLabel.textContent = "EM NÍVEL!";
+                mainDegreeLabel.className = "text-[10px] font-bold uppercase tracking-wider text-emerald-400 font-bold";
+            } else {
+                levelContainer.className = "relative w-72 h-72 sm:w-80 sm:h-80 rounded-full glass-card p-4 flex items-center justify-center transition-all duration-300 shadow-2xl level-glow-blue border border-slate-700/50";
+                centerDegreeBox.className = "flex-1 glass-card p-3 rounded-2xl flex flex-col items-center border border-sky-500/30 bg-sky-950/20 transition-all duration-300";
+                degTotalEl.className = "text-2xl sm:text-3xl font-black font-mono text-sky-400 mt-0.5";
+                mainDegreeLabel.textContent = "Desvio Total";
+                mainDegreeLabel.className = "text-[10px] font-bold uppercase tracking-wider text-slate-400";
+            }
+        }
+
+        // Trigger visual ripple on level lock
+        function triggerRippleAnimation() {
+            levelRipple.classList.remove('animate-ripple', 'opacity-0');
+            // Force Reflow
+            void levelRipple.offsetWidth;
+            levelRipple.classList.add('animate-ripple');
+        }
+
+        // Device Orientation Event Handler
+        function handleOrientation(e) {
+            if (!state.hasSensorEvent) {
+                state.hasSensorEvent = true;
+                permissionOverlay.classList.add('hidden');
+                sensorStatusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Giroscópio Ativo';
+            }
+
+            if (state.isLocked) return;
+
+            // Beta: Pitch (front-back tilt -180 to 180)
+            // Gamma: Roll (left-right tilt -90 to 90)
+            let pitch = e.beta || 0;
+            let roll = e.gamma || 0;
+
+            // Apply Exponential Moving Average (EMA) for Smoothing
+            state.filteredX = state.filteredX + state.dampingFactor * (roll - state.filteredX);
+            state.filteredY = state.filteredY + state.dampingFactor * (pitch - state.filteredY);
+
+            // Update simulation slider displays if active
+            simSliderX.value = state.filteredX;
+            simSliderY.value = state.filteredY;
+            simXVal.textContent = `${state.filteredX.toFixed(1)}°`;
+            simYVal.textContent = `${state.filteredY.toFixed(1)}°`;
+        }
+
+        // Request iOS / Modern Browser Permission for Device Orientation
+        function requestSensorPermission() {
+            initAudio();
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        if (response === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation, true);
+                            permissionOverlay.classList.add('hidden');
+                            showToast('Giroscópio ativado com sucesso!', 'fa-circle-check', 'text-emerald-400');
+                        } else {
+                            showToast('Permissão do giroscópio negada.', 'fa-triangle-exclamation', 'text-amber-400');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        enableFallbackSimulation();
+                    });
+            } else if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', handleOrientation, true);
+                // Check if sensor produces data within 1 second
+                setTimeout(() => {
+                    if (!state.hasSensorEvent) {
+                        enableFallbackSimulation();
+                    }
+                }, 1000);
+            } else {
+                enableFallbackSimulation();
+            }
+        }
+
+        function enableFallbackSimulation() {
+            state.usingSim = true;
+            permissionOverlay.classList.add('hidden');
+            sensorStatusText.innerHTML = '<span class="w-2 h-2 rounded-full bg-sky-400"></span> Modo Simulação';
+            showToast('Usando Modo Simulação (Desktop)', 'fa-desktop', 'text-sky-400');
+        }
+
+        // Interactive Mouse/Touch Canvas Dragging for Simulation & Calibration Testing
+        canvas.addEventListener('mousedown', (e) => {
+            state.isDragging = true;
+            updateDragPosition(e);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (state.isDragging) updateDragPosition(e);
+        });
+
+        window.addEventListener('mouseup', () => state.isDragging = false);
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                state.isDragging = true;
+                updateDragPosition(e.touches[0]);
+            }
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (state.isDragging && e.touches.length > 0) {
+                updateDragPosition(e.touches[0]);
+            }
+        });
+
+        window.addEventListener('touchend', () => state.isDragging = false);
+
+        function updateDragPosition(evt) {
+            const rect = canvas.getBoundingClientRect();
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+            const mouseX = evt.clientX - rect.left;
+            const mouseY = evt.clientY - rect.top;
+
+            // Map pixel delta to simulated degrees (-30° to +30°)
+            const maxRadius = rect.width / 2 - 20;
+            const degX = ((mouseX - cx) / maxRadius) * 30;
+            const degY = ((mouseY - cy) / maxRadius) * 30;
+
+            state.filteredX = Math.max(-45, Math.min(45, degX));
+            state.filteredY = Math.max(-45, Math.min(45, degY));
+
+            simSliderX.value = state.filteredX;
+            simSliderY.value = state.filteredY;
+            simXVal.textContent = `${state.filteredX.toFixed(1)}°`;
+            simYVal.textContent = `${state.filteredY.toFixed(1)}°`;
+        }
+
+        // Slider Handlers
+        simSliderX.addEventListener('input', (e) => {
+            state.filteredX = parseFloat(e.target.value);
+            simXVal.textContent = `${state.filteredX.toFixed(1)}°`;
+        });
+
+        simSliderY.addEventListener('input', (e) => {
+            state.filteredY = parseFloat(e.target.value);
+            simYVal.textContent = `${state.filteredY.toFixed(1)}°`;
+        });
+
+        // Mode Switching Logic
+        function setMode(newMode) {
+            state.mode = newMode;
+            mode2DBtn.className = newMode === '2D' ? "flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 bg-sky-600 text-white shadow-md font-bold" : "flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 text-slate-400 hover:text-white";
+            modeHorizBtn.className = newMode === 'HORIZONTAL' ? "flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 bg-sky-600 text-white shadow-md font-bold" : "flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 text-slate-400 hover:text-white";
+            modeVertBtn.className = newMode === 'VERTICAL' ? "flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 bg-sky-600 text-white shadow-md font-bold" : "flex-1 py-2 rounded-lg transition-all text-center flex items-center justify-center gap-2 text-slate-400 hover:text-white";
+
+            showToast(`Modo alterado para ${newMode === '2D' ? 'Superfície 2D' : newMode === 'HORIZONTAL' ? 'Horizontal' : 'Vertical'}`, 'fa-sliders', 'text-sky-400');
+        }
+
+        mode2DBtn.addEventListener('click', () => setMode('2D'));
+        modeHorizBtn.addEventListener('click', () => setMode('HORIZONTAL'));
+        modeVertBtn.addEventListener('click', () => setMode('VERTICAL'));
+
+        // Calibration (Set current angle as relative zero baseline)
+        calibrateBtn.addEventListener('click', () => {
+            state.offsetX = state.filteredX;
+            state.offsetY = state.filteredY;
+            showToast('Novo ponto zero calibrado!', 'fa-crosshairs', 'text-emerald-400');
+        });
+
+        // Reset Calibration
+        resetCalibBtn.addEventListener('click', () => {
+            state.offsetX = 0;
+            state.offsetY = 0;
+            showToast('Calibração de fábrica restaurada.', 'fa-rotate-left', 'text-sky-400');
+        });
+
+        // Hold / Lock Angle Reading
+        holdBtn.addEventListener('click', () => {
+            state.isLocked = !state.isLocked;
+            if (state.isLocked) {
+                state.lockedX = state.filteredX - state.offsetX;
+                state.lockedY = state.filteredY - state.offsetY;
+                holdIcon.className = 'fa-solid fa-lock text-amber-400';
+                holdText.textContent = 'Destravar';
+                holdBtn.classList.add('bg-amber-500/20', 'border-amber-500/40');
+                showToast('Leitura travada!', 'fa-lock', 'text-amber-400');
+            } else {
+                holdIcon.className = 'fa-solid fa-lock text-slate-400';
+                holdText.textContent = 'Travar';
+                holdBtn.classList.remove('bg-amber-500/20', 'border-amber-500/40');
+                showToast('Leitura em tempo real.', 'fa-lock-open', 'text-sky-400');
+            }
+        });
+
+        // Audio Toggle Button
+        audioToggleBtn.addEventListener('click', () => {
+            initAudio();
+            state.soundEnabled = !state.soundEnabled;
+            if (state.soundEnabled) {
+                audioIcon.className = 'fa-solid fa-volume-high text-emerald-400';
+                audioToggleBtn.classList.add('border-emerald-500/50');
+                showToast('Sinal sonoro ativado', 'fa-volume-high', 'text-emerald-400');
+            } else {
+                audioIcon.className = 'fa-solid fa-volume-xmark text-slate-400';
+                audioToggleBtn.classList.remove('border-emerald-500/50');
+                stopContinuousPitch();
+                showToast('Sinal sonoro desativado', 'fa-volume-xmark', 'text-slate-400');
+            }
+        });
+
+        // Settings Modal Handlers
+        settingsToggleBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('opacity-0', 'pointer-events-none');
+            settingsModalCard.classList.remove('scale-95');
+            settingsModalCard.classList.add('scale-100');
+        });
+
+        function closeSettings() {
+            settingsModal.classList.add('opacity-0', 'pointer-events-none');
+            settingsModalCard.classList.remove('scale-100');
+            settingsModalCard.classList.add('scale-95');
+        }
+
+        closeSettingsBtn.addEventListener('click', closeSettings);
+        saveSettingsBtn.addEventListener('click', closeSettings);
+
+        toleranceRange.addEventListener('input', (e) => {
+            state.tolerance = parseFloat(e.target.value);
+            toleranceVal.textContent = `${state.tolerance.toFixed(1)}°`;
+        });
+
+        dampingRange.addEventListener('input', (e) => {
+            state.dampingFactor = parseFloat(e.target.value);
+            dampingVal.textContent = state.dampingFactor < 0.15 ? 'Alto' : state.dampingFactor < 0.35 ? 'Médio' : 'Suave';
+        });
+
+        vibrateToggle.addEventListener('change', (e) => {
+            state.vibrateEnabled = e.target.checked;
+        });
+
+        pitchAudioToggle.addEventListener('change', (e) => {
+            state.pitchSoundEnabled = e.target.checked;
+        });
+
+        enableSensorsBtn.addEventListener('click', requestSensorPermission);
+
+        // Auto-initialize on load
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            requestSensorPermission();
+            requestAnimationFrame(renderLevel);
+        });
+    </script>
+</body>
+</html>
