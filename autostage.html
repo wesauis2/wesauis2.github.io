@@ -194,15 +194,18 @@
                         </button>
                     </div>
 
-                    <!-- Loading State Overlay -->
+                    <!-- Loading & Error Recovery Overlay -->
                     <div id="loadingSpinner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center space-y-4 z-30 transition-opacity duration-300">
                         <div class="relative flex items-center justify-center">
                             <div class="w-12 h-12 rounded-full border-2 border-slate-800 border-t-cyan-500 animate-spin"></div>
                             <i data-lucide="scan-face" class="w-5 h-5 text-cyan-400 absolute"></i>
                         </div>
-                        <div class="text-center space-y-1 px-4">
+                        <div class="text-center space-y-2 px-4 max-w-xs">
                             <p class="text-sm font-medium text-slate-200" id="loadingMessage">Starting Camera & Neural Engine...</p>
                             <p class="text-xs text-slate-500">Please grant camera permissions when prompted</p>
+                            <button id="btnRetryCamera" onclick="startCameraStream()" class="hidden mt-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold rounded-xl text-xs shadow-lg transition active:scale-95">
+                                Retry Camera Stream
+                            </button>
                         </div>
                     </div>
 
@@ -290,13 +293,13 @@
                         <input id="sliderLerp" type="range" min="0.02" max="0.30" step="0.01" value="0.08" oninput="updateConfig()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
                     </div>
 
-                    <!-- Stage Margin / Zoom Slider -->
+                    <!-- Stage Margin / Zoom Slider (Updated range 1x to 5x, default 4x) -->
                     <div class="space-y-2">
                         <div class="flex justify-between text-xs">
                             <label for="sliderPadding" class="text-slate-400">Framing Margin (Zoom)</label>
-                            <span id="lblPadding" class="font-mono text-fuchsia-400">2.2x</span>
+                            <span id="lblPadding" class="font-mono text-fuchsia-400">4.0x</span>
                         </div>
-                        <input id="sliderPadding" type="range" min="1.2" max="3.5" step="0.1" value="2.2" oninput="updateConfig()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400">
+                        <input id="sliderPadding" type="range" min="1.0" max="5.0" step="0.1" value="4.0" oninput="updateConfig()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400">
                     </div>
 
                     <!-- Manual Zoom Level Slider -->
@@ -344,9 +347,9 @@
         <div class="space-y-2">
             <div class="flex justify-between text-xs">
                 <label class="text-slate-400">Framing Margin (Zoom)</label>
-                <span id="lblPaddingMobile" class="font-mono text-fuchsia-400">2.2x</span>
+                <span id="lblPaddingMobile" class="font-mono text-fuchsia-400">4.0x</span>
             </div>
-            <input id="sliderPaddingMobile" type="range" min="1.2" max="3.5" step="0.1" value="2.2" oninput="syncConfigFromMobile('padding')" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400">
+            <input id="sliderPaddingMobile" type="range" min="1.0" max="5.0" step="0.1" value="4.0" oninput="syncConfigFromMobile('padding')" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400">
         </div>
     </div>
 
@@ -365,9 +368,9 @@
             isModelLoaded: false,
             isMobileDrawerOpen: false,
 
-            // Framing Config
+            // Framing Config (Updated to start at 4.0x)
             lerpSpeed: 0.08,
-            paddingMultiplier: 2.2,
+            paddingMultiplier: 4.0,
             manualZoom: 1.0,
 
             // Target Hold Logic
@@ -405,7 +408,7 @@
         const rawCtx = rawCanvas.getContext('2d');
         const cameraViewport = document.getElementById('cameraViewport');
 
-        // Pure JS Motion / Pixel Diff Tracker Canvas (Zero-dependency fallback engine)
+        // Pure JS Motion / Pixel Diff Tracker Canvas
         const motionCanvas = document.createElement('canvas');
         motionCanvas.width = 160;
         motionCanvas.height = 90;
@@ -416,6 +419,7 @@
         const cameraSelectMobile = document.getElementById('cameraSelectMobile');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const loadingMessage = document.getElementById('loadingMessage');
+        const btnRetryCamera = document.getElementById('btnRetryCamera');
         const debugOverlayLayer = document.getElementById('debugOverlayLayer');
         const splitRawContainer = document.getElementById('splitRawContainer');
 
@@ -482,7 +486,6 @@
             return null;
         }
 
-        // Toast Helper
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             if (!container) return;
@@ -538,6 +541,7 @@
                 loadingSpinner.classList.add('opacity-0');
                 loadingSpinner.style.pointerEvents = 'none';
             }
+            if (btnRetryCamera) btnRetryCamera.classList.add('hidden');
         }
 
         function showLoader(msg = "Connecting to video source...") {
@@ -548,6 +552,7 @@
             if (loadingMessage) {
                 loadingMessage.innerText = msg;
             }
+            if (btnRetryCamera) btnRetryCamera.classList.add('hidden');
         }
 
         async function enumerateCameraDevices() {
@@ -592,57 +597,92 @@
             }
         }
 
+        // Resilient Media Stream Launcher with Multi-stage Fallback Ladder
         async function startCameraStream(useDeviceId = null, preferredFacing = null) {
             showLoader("Connecting to camera stream...");
 
             if (state.currentStream) {
-                state.currentStream.getTracks().forEach(track => track.stop());
+                state.currentStream.getTracks().forEach(track => {
+                    try { track.stop(); } catch(e){}
+                });
                 state.currentStream = null;
             }
 
-            const targetFacing = preferredFacing || state.currentFacingMode;
+            const targetFacing = preferredFacing || state.currentFacingMode || 'user';
 
-            // Flexible camera constraints to prevent OverconstrainedError on mobile browsers
-            let constraints = {
-                audio: false,
-                video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: targetFacing === 'environment' ? { ideal: 'environment' } : { ideal: 'user' }
-                }
-            };
-
+            // Constraint attempt ladder to avoid mobile browser OverconstrainedError blocks
+            const attempts = [];
+            
             if (useDeviceId) {
-                constraints.video = {
+                attempts.push({ video: { deviceId: useDeviceId, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+                attempts.push({ video: { deviceId: useDeviceId }, audio: false });
+            }
+            
+            attempts.push({
+                video: {
+                    facingMode: { ideal: targetFacing },
                     width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    deviceId: { exact: useDeviceId }
-                };
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+            
+            attempts.push({
+                video: { facingMode: targetFacing },
+                audio: false
+            });
+            
+            attempts.push({ video: true, audio: false });
+
+            let stream = null;
+            let lastError = null;
+
+            for (const constraint of attempts) {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia(constraint);
+                    if (stream) break;
+                } catch (err) {
+                    lastError = err;
+                    console.warn("Camera constraint attempt failed:", err);
+                }
+            }
+
+            if (!stream) {
+                console.error("All camera stream connection attempts failed:", lastError);
+                showToast("Camera access failed: " + (lastError ? lastError.message : "Unknown error"), 'error');
+                if (loadingMessage) {
+                    loadingMessage.innerText = "Camera access denied or device unavailable.";
+                }
+                if (btnRetryCamera) btnRetryCamera.classList.remove('hidden');
+                return;
             }
 
             try {
-                let stream;
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia(constraints);
-                } catch (exactErr) {
-                    console.warn("Primary camera request failed, trying flexible fallback:", exactErr);
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                }
-
                 state.currentStream = stream;
                 videoEl.srcObject = stream;
-                
-                try {
-                    await videoEl.play();
-                } catch (playEx) {
-                    console.warn("Video play promise handled:", playEx);
-                }
+
+                // Promise wait for stream metadata loading
+                await new Promise((resolve) => {
+                    let resolved = false;
+                    const onReady = () => {
+                        if (!resolved) {
+                            resolved = true;
+                            videoEl.play().catch(e => console.warn("Auto-play blocked:", e));
+                            resolve();
+                        }
+                    };
+                    videoEl.onloadedmetadata = onReady;
+                    videoEl.onloadeddata = onReady;
+                    setTimeout(onReady, 1500); // Safety timeout
+                });
 
                 const track = stream.getVideoTracks()[0];
                 if (track) {
                     const settings = track.getSettings();
                     if (settings.facingMode) {
                         state.currentFacingMode = settings.facingMode;
+                    } else {
+                        state.currentFacingMode = targetFacing;
                     }
                     if (settings.deviceId) {
                         state.selectedDeviceId = settings.deviceId;
@@ -653,16 +693,12 @@
                 await enumerateCameraDevices();
                 updateCanvasDimensions();
 
-                if (state.isModelLoaded) {
-                    hideLoader();
-                }
+                hideLoader();
 
             } catch (error) {
-                console.error("Camera access error:", error);
-                showToast("Camera access error: " + error.message, 'error');
-                if (loadingMessage) {
-                    loadingMessage.innerText = "Camera access denied or unavailable";
-                }
+                console.error("Error setting up video playback:", error);
+                showToast("Error starting camera view", 'error');
+                if (btnRetryCamera) btnRetryCamera.classList.remove('hidden');
             }
         }
 
@@ -798,7 +834,7 @@
             const statusTxt = document.getElementById('statusText');
             const manualBadge = document.getElementById('manualLockBadge');
 
-            // 1. Manual Tap Target Lock (Priority)
+            // 1. Manual Tap Target Lock
             if (state.manualTargetRect && (now - state.manualTargetTime < 12000)) {
                 state.trackingMode = 'MANUAL';
                 state.lastTargetSeenTime = now;
@@ -815,7 +851,7 @@
                 clearManualTarget();
             }
 
-            // 2. AI Hybrid (Faces or Persons)
+            // 2. AI Hybrid Detections
             let boxes = [];
             if (faces.length > 0) {
                 boxes = faces.map(f => f.box);
@@ -842,7 +878,7 @@
                 state.peopleRect = makeRect(xMin, yMin, xMax - xMin, yMax - yMin);
                 calculateTargetFrame(state.peopleRect);
 
-            // 3. Pure JS Motion Tracking Fallback
+            // 3. Motion Tracking Fallback
             } else if (motionBox) {
                 state.trackingMode = 'MOTION';
                 state.lastTargetSeenTime = now;
@@ -1099,7 +1135,7 @@
             const padSlider = document.getElementById('sliderPadding');
 
             const lerpVal = lerpSlider ? parseFloat(lerpSlider.value) : 0.08;
-            const padVal = padSlider ? parseFloat(padSlider.value) : 2.2;
+            const padVal = padSlider ? parseFloat(padSlider.value) : 4.0;
 
             state.lerpSpeed = lerpVal;
             state.paddingMultiplier = padVal;
