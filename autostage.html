@@ -19,6 +19,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.10.0/dist/tf-backend-webgl.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-detection@1.0.2/dist/face-detection.min.js"></script>
+    <!-- COCO-SSD for Person & Head/Body Tracking (Supports Back & Sideways Views) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <script>
         tailwind.config = {
@@ -113,7 +115,7 @@
                         </span>
                         <span id="statusText" class="text-slate-300 text-[11px]">Initializing...</span>
                     </div>
-                    <div class="flex items-center space-x-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-400">
+                    <div class="flex items-center space-x-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-400" title="Detected Targets">
                         <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i>
                         <span><strong id="faceCountBadge" class="text-slate-200">0</strong></span>
                     </div>
@@ -132,7 +134,7 @@
             <section class="relative w-full h-full lg:h-auto lg:col-span-8 flex flex-col justify-center items-center bg-slate-950 overflow-hidden lg:rounded-2xl lg:border lg:border-slate-800 lg:shadow-2xl">
                 
                 <!-- Camera Stage Canvas Area -->
-                <div id="cameraViewport" class="relative w-full h-full lg:aspect-video flex items-center justify-center overflow-hidden bg-black">
+                <div id="cameraViewport" class="relative w-full h-full lg:aspect-video flex items-center justify-center overflow-hidden bg-black touch-none">
                     
                     <!-- Hidden Source Video Element -->
                     <video id="webcam" autoplay playsinline muted class="hidden"></video>
@@ -149,7 +151,7 @@
                     <!-- Debug Overlay Box Layer -->
                     <div id="debugOverlayLayer" class="pointer-events-none absolute inset-0 z-10 transition-opacity duration-300 opacity-0">
                         <div id="dbgPeopleRect" class="absolute border-2 border-dashed border-cyan-400 bg-cyan-500/10 rounded-lg transition-all duration-75 hidden">
-                            <span class="absolute -top-5 left-0 text-[10px] font-mono bg-cyan-500 text-slate-950 font-semibold px-1 py-0.5 rounded shadow">Face</span>
+                            <span class="absolute -top-5 left-0 text-[10px] font-mono bg-cyan-500 text-slate-950 font-semibold px-1 py-0.5 rounded shadow">Subject</span>
                         </div>
                         <div id="dbgTargetRect" class="absolute border-2 border-dashed border-fuchsia-400 bg-fuchsia-500/10 rounded-lg transition-all duration-75 hidden">
                             <span class="absolute -top-5 right-0 text-[10px] font-mono bg-fuchsia-500 text-slate-950 font-semibold px-1 py-0.5 rounded shadow">Target</span>
@@ -157,6 +159,26 @@
                         <div id="dbgVisibleRect" class="absolute border-2 border-amber-400 bg-amber-500/5 rounded-lg transition-all duration-75 hidden">
                             <span class="absolute bottom-1 right-2 text-[10px] font-mono text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded">Crop</span>
                         </div>
+                    </div>
+
+                    <!-- Target Lost Hold Status Badge -->
+                    <div id="targetHoldBadge" class="hidden absolute top-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full glass-card border border-amber-500/40 text-[11px] font-mono text-amber-300 flex items-center space-x-1.5 z-20 shadow-lg animate-pulse">
+                        <i data-lucide="timer" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>Holding Frame (<span id="holdTimerCountdown">3.0</span>s)</span>
+                    </div>
+
+                    <!-- Manual Zoom On-Screen Controls Overlay -->
+                    <div class="absolute top-4 right-4 z-20 flex flex-col space-y-1.5 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-xl border border-slate-800 shadow-xl">
+                        <button onclick="adjustManualZoom(0.2)" title="Zoom In" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 transition active:scale-95">
+                            <i data-lucide="zoom-in" class="w-4 h-4"></i>
+                        </button>
+                        <span id="manualZoomBadge" class="text-[10px] font-mono text-center text-slate-300 font-medium py-0.5">1.0x</span>
+                        <button onclick="adjustManualZoom(-0.2)" title="Zoom Out" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 transition active:scale-95">
+                            <i data-lucide="zoom-out" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="resetManualZoom()" title="Reset Zoom" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-fuchsia-400 transition active:scale-95">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
 
                     <!-- Loading State Overlay -->
@@ -171,27 +193,27 @@
                         </div>
                     </div>
 
-                    <!-- Floating Quick Controls Toolbar (Mobile & Desktop) -->
-                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center space-x-2 px-3 py-2 rounded-2xl glass-panel shadow-2xl z-20 pb-safe">
+                    <!-- Floating Quick Controls Toolbar (Unconstrained Mobile Floating Bar) -->
+                    <div class="absolute bottom-4 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 flex items-center justify-between sm:justify-center space-x-1.5 sm:space-x-2 px-3 py-2 rounded-2xl glass-panel shadow-2xl z-20 pb-safe w-auto max-w-full">
                         
                         <!-- Camera Flip Switch -->
-                        <button id="btnFlipCamera" title="Switch Camera" onclick="toggleFacingMode()" class="p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow">
+                        <button id="btnFlipCamera" title="Switch Camera" onclick="toggleFacingMode()" class="p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow shrink-0">
                             <i data-lucide="switch-camera" class="w-4 h-4 text-cyan-400"></i>
                         </button>
 
                         <!-- Toggle Auto Stage Framing -->
-                        <button id="btnToggleTracking" title="Toggle Auto Framing" onclick="toggleTracking()" class="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold transition active:scale-95 shadow-lg shadow-cyan-500/20">
-                            <i data-lucide="crosshair" class="w-4 h-4"></i>
-                            <span class="text-xs font-bold" id="btnTrackingLabel">Auto Stage On</span>
+                        <button id="btnToggleTracking" title="Toggle Auto Framing" onclick="toggleTracking()" class="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold transition active:scale-95 shadow-lg shadow-cyan-500/20 shrink-0">
+                            <i data-lucide="crosshair" class="w-4 h-4 shrink-0"></i>
+                            <span class="text-xs font-bold whitespace-nowrap" id="btnTrackingLabel">Auto Stage On</span>
                         </button>
 
                         <!-- Open Drawer Button (Mobile Only) -->
-                        <button id="btnMobileSettings" title="Camera Settings" onclick="toggleMobileSettingsDrawer()" class="lg:hidden p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow">
+                        <button id="btnMobileSettings" title="Camera Settings" onclick="toggleMobileSettingsDrawer()" class="lg:hidden p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow shrink-0">
                             <i data-lucide="sliders" class="w-4 h-4 text-fuchsia-400"></i>
                         </button>
 
                         <!-- Fullscreen Canvas -->
-                        <button id="btnFullscreen" title="Toggle Fullscreen" onclick="toggleFullscreen()" class="p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow">
+                        <button id="btnFullscreen" title="Toggle Fullscreen" onclick="toggleFullscreen()" class="p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 transition active:scale-95 border border-slate-700/60 shadow shrink-0">
                             <i data-lucide="maximize-2" class="w-4 h-4"></i>
                         </button>
                     </div>
@@ -263,35 +285,14 @@
                         </div>
                         <input id="sliderPadding" type="range" min="1.2" max="3.5" step="0.1" value="2.2" oninput="updateConfig()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-fuchsia-400">
                     </div>
-                </div>
 
-                <!-- Telemetry Stats Panel -->
-                <div id="telemetryCard" class="glass-panel p-5 rounded-2xl space-y-3 font-mono text-xs">
-                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                        <h2 class="font-semibold text-xs text-slate-300 flex items-center space-x-2">
-                            <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
-                            <span>System Telemetry</span>
-                        </h2>
-                        <span id="telemetryStatus" class="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">LIVE</span>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2 text-[11px]">
-                        <div class="glass-card p-2.5 rounded-xl space-y-1">
-                            <span class="text-slate-500 block">Cam Sensor</span>
-                            <strong id="dbgCamRes" class="text-slate-200">0x0</strong>
+                    <!-- Manual Zoom Level Slider -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <label for="sliderManualZoom" class="text-slate-400">Manual Override Zoom</label>
+                            <span id="lblManualZoom" class="font-mono text-emerald-400">1.0x</span>
                         </div>
-                        <div class="glass-card p-2.5 rounded-xl space-y-1">
-                            <span class="text-slate-500 block">Output Canvas</span>
-                            <strong id="dbgCanvasRes" class="text-slate-200">0x0</strong>
-                        </div>
-                        <div class="glass-card p-2.5 rounded-xl space-y-1">
-                            <span class="text-slate-500 block">Active Crop</span>
-                            <strong id="dbgVisibleBox" class="text-amber-300">0,0 - 0x0</strong>
-                        </div>
-                        <div class="glass-card p-2.5 rounded-xl space-y-1">
-                            <span class="text-slate-500 block">Target Crop</span>
-                            <strong id="dbgTargetBox" class="text-fuchsia-300">0,0 - 0x0</strong>
-                        </div>
+                        <input id="sliderManualZoom" type="range" min="1.0" max="3.5" step="0.1" value="1.0" oninput="onManualZoomSliderChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400">
                     </div>
                 </div>
 
@@ -350,13 +351,20 @@
             currentFacingMode: 'user', // 'user' (front) or 'environment' (back)
             selectedDeviceId: null,
             currentStream: null,
-            detector: null,
+            faceDetector: null,
+            cocoDetector: null,
             isModelLoaded: false,
             isMobileDrawerOpen: false,
 
             // Framing Config
             lerpSpeed: 0.08,
             paddingMultiplier: 2.2,
+            manualZoom: 1.0,
+
+            // Target Hold Logic (3 seconds grace period when lost face)
+            lastTargetSeenTime: performance.now(),
+            holdDurationMs: 3000,
+            isHoldingFrame: false,
 
             // Coordinates & Bounds
             cameraRect: { x: 0, y: 0, w: 1280, h: 720 },
@@ -368,7 +376,12 @@
             lastFrameTime: performance.now(),
             fps: 0,
             frameCount: 0,
-            detectedFaceCount: 0
+            detectedFaceCount: 0,
+            detectedBodyCount: 0,
+
+            // Touch Pinch Zoom Tracking
+            touchStartDist: 0,
+            initialZoomOnTouch: 1.0
         };
 
         // DOM Element Cache
@@ -377,6 +390,7 @@
         const outputCtx = outputCanvas.getContext('2d');
         const rawCanvas = document.getElementById('rawCanvas');
         const rawCtx = rawCanvas.getContext('2d');
+        const cameraViewport = document.getElementById('cameraViewport');
 
         const cameraSelect = document.getElementById('cameraSelect');
         const cameraSelectMobile = document.getElementById('cameraSelectMobile');
@@ -388,6 +402,8 @@
         const dbgPeopleRect = document.getElementById('dbgPeopleRect');
         const dbgTargetRect = document.getElementById('dbgTargetRect');
         const dbgVisibleRect = document.getElementById('dbgVisibleRect');
+        const targetHoldBadge = document.getElementById('targetHoldBadge');
+        const holdTimerCountdown = document.getElementById('holdTimerCountdown');
 
         // Toast Helper
         function showToast(message, type = 'info') {
@@ -410,6 +426,27 @@
 
         const makeRect = (x, y, w, h) => ({ x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) });
         const lerp = (start, end, t) => start + (end - start) * t;
+
+        function adjustManualZoom(delta) {
+            setManualZoom(state.manualZoom + delta);
+        }
+
+        function resetManualZoom() {
+            setManualZoom(1.0);
+            showToast("Manual zoom reset");
+        }
+
+        function setManualZoom(zoomVal) {
+            state.manualZoom = Math.max(1.0, Math.min(3.5, parseFloat(zoomVal.toFixed(1))));
+            document.getElementById('manualZoomBadge').innerText = `${state.manualZoom.toFixed(1)}x`;
+            document.getElementById('lblManualZoom').innerText = `${state.manualZoom.toFixed(1)}x`;
+            document.getElementById('sliderManualZoom').value = state.manualZoom;
+        }
+
+        function onManualZoomSliderChange() {
+            const val = parseFloat(document.getElementById('sliderManualZoom').value);
+            setManualZoom(val);
+        }
 
         // Hide Loader explicitly when stream is ready
         function hideLoader() {
@@ -497,7 +534,6 @@
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
                 } catch (exactErr) {
                     console.warn("Exact facingMode request failed, trying flexible facingMode:", exactErr);
-                    // Fallback to non-exact facingMode constraint
                     constraints.video.facingMode = preferredFacing || state.currentFacingMode;
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
                 }
@@ -505,7 +541,6 @@
                 state.currentStream = stream;
                 videoEl.srcObject = stream;
                 
-                // Force video element playback (critical for Mobile Safari)
                 await videoEl.play().catch(e => console.warn("Video play exception handled:", e));
 
                 const track = stream.getVideoTracks()[0];
@@ -520,7 +555,6 @@
                 updateUIFacingBadge();
                 await enumerateCameraDevices();
 
-                // If AI model is already initialized, hide loading spinner right away
                 if (state.isModelLoaded) {
                     hideLoader();
                 }
@@ -576,30 +610,36 @@
             badge.className = `text-[10px] font-mono font-medium px-2 py-0.5 rounded border ${isBack ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'}`;
         }
 
-        // Initialize TensorFlow / MediaPipe Face Detection
-        async function initFaceDetector() {
+        // Initialize Hybrid Detector (MediaPipe Face + COCO-SSD Person)
+        async function initDetectors() {
             try {
-                showLoader("Loading AI Neural Model...");
+                showLoader("Loading AI Neural Models (Face & Head/Body)...");
                 await tf.ready();
                 
-                const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
+                // 1. MediaPipe Face Detector (up to 10 faces)
+                const faceModel = faceDetection.SupportedModels.MediaPipeFaceDetector;
                 const detectorConfig = {
                     runtime: 'mediapipe',
                     solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection',
-                    maxFaces: 5
+                    maxFaces: 10
                 };
+                state.faceDetector = await faceDetection.createDetector(faceModel, detectorConfig);
 
-                state.detector = await faceDetection.createDetector(model, detectorConfig);
+                // 2. COCO-SSD Detector (detects people sideways & from behind)
+                if (window.cocoSsd) {
+                    state.cocoDetector = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
+                }
+
                 state.isModelLoaded = true;
 
                 hideLoader();
-                document.getElementById('statusText').innerText = "AI Tracking Active";
-                showToast("Face tracking engine initialized!");
+                document.getElementById('statusText').innerText = "AI Hybrid Tracking";
+                showToast("Multi-face & head/body neural tracking ready!");
 
                 startDetectionLoop();
             } catch (err) {
-                console.error("Error loading face detection model:", err);
-                showToast("Failed to initialize AI model: " + err.message, 'error');
+                console.error("Error loading detection models:", err);
+                showToast("Failed to initialize AI models: " + err.message, 'error');
                 loadingMessage.innerText = "Error loading AI Engine. Please reload.";
             }
         }
@@ -609,13 +649,12 @@
             updateCanvasDimensions();
 
             if (!state.isModelLoaded) {
-                initFaceDetector();
+                initDetectors();
             } else {
                 hideLoader();
             }
         };
 
-        // Resize Canvas and Viewport according to screen orientation and size
         function updateCanvasDimensions() {
             const camW = videoEl.videoWidth || 1280;
             const camH = videoEl.videoHeight || 720;
@@ -625,34 +664,47 @@
             const viewportW = viewportContainer.clientWidth || window.innerWidth;
             const viewportH = viewportContainer.clientHeight || window.innerHeight;
 
-            // Set actual canvas drawing resolution
             outputCanvas.width = viewportW;
             outputCanvas.height = viewportH;
             rawCanvas.width = camW;
             rawCanvas.height = camH;
 
-            // Update state visible and target rects if uninitialized
             if (!state.visibleRect) state.visibleRect = makeRect(0, 0, camW, camH);
             if (!state.targetRect) state.targetRect = makeRect(0, 0, camW, camH);
 
-            // Update Telemetry UI
             document.getElementById('dbgCamRes').innerText = `${camW}x${camH}`;
             document.getElementById('dbgCanvasRes').innerText = `${viewportW}x${viewportH}`;
 
-            // Orientation check
             const isPortrait = window.innerHeight > window.innerWidth;
             document.getElementById('orientationText').innerText = isPortrait ? 'PORTRAIT' : 'LANDSCAPE';
         }
 
-        // Asynchronous AI Face Detection Loop
+        // Asynchronous AI Hybrid Detection Loop
         async function startDetectionLoop() {
-            if (!state.detector) return;
-
             setInterval(async () => {
                 if (videoEl.readyState >= 2 && state.isTrackingEnabled) {
                     try {
-                        const faces = await state.detector.estimateFaces(videoEl, { flipHorizontal: false });
-                        processDetectedFaces(faces);
+                        // 1. Detect faces
+                        let faces = [];
+                        if (state.faceDetector) {
+                            faces = await state.faceDetector.estimateFaces(videoEl, { flipHorizontal: false });
+                        }
+
+                        // 2. Detect people (for sideways & back view tracking when faces aren't visible)
+                        let personBoxes = [];
+                        if (state.cocoDetector && faces.length === 0) {
+                            const predictions = await state.cocoDetector.detect(videoEl, 5, 0.4);
+                            personBoxes = predictions
+                                .filter(p => p.class === 'person')
+                                .map(p => ({
+                                    xMin: p.bbox[0],
+                                    yMin: p.bbox[1],
+                                    xMax: p.bbox[0] + p.bbox[2],
+                                    yMax: p.bbox[1] + p.bbox[3]
+                                }));
+                        }
+
+                        processHybridDetections(faces, personBoxes);
                     } catch (e) {
                         console.warn("Detection frame skipped:", e);
                     }
@@ -660,68 +712,94 @@
             }, 100);
         }
 
-        // Calculate framing coordinates for portrait & landscape aspect ratios
-        function processDetectedFaces(faces) {
-            state.detectedFaceCount = faces.length;
-            document.getElementById('faceCountBadge').innerText = faces.length;
-
+        // Process faces & people detections with 3-second hold timer
+        function processHybridDetections(faces, personBoxes) {
+            const now = performance.now();
             const camW = state.cameraRect.w;
             const camH = state.cameraRect.h;
 
-            if (faces.length === 0) {
+            state.detectedFaceCount = faces.length;
+            state.detectedBodyCount = personBoxes.length;
+
+            const totalTargets = faces.length > 0 ? faces.length : personBoxes.length;
+            document.getElementById('faceCountBadge').innerText = totalTargets;
+
+            // Gather all candidate bounding boxes
+            let boxes = [];
+            if (faces.length > 0) {
+                boxes = faces.map(f => f.box);
+            } else if (personBoxes.length > 0) {
+                boxes = personBoxes;
+            }
+
+            if (boxes.length > 0) {
+                // Active detection target found
+                state.lastTargetSeenTime = now;
+                state.isHoldingFrame = false;
+                targetHoldBadge.classList.add('hidden');
+
+                let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+
+                for (const box of boxes) {
+                    xMin = Math.min(xMin, box.xMin);
+                    xMax = Math.max(xMax, box.xMax);
+                    yMin = Math.min(yMin, box.yMin);
+                    yMax = Math.max(yMax, box.yMax);
+                }
+
+                const faceW = xMax - xMin;
+                const faceH = yMax - yMin;
+                const faceCenterX = xMin + faceW / 2;
+                const faceCenterY = yMin + faceH / 2;
+
+                state.peopleRect = makeRect(xMin, yMin, faceW, faceH);
+
+                // Compute framing target box
+                const canvasAspect = outputCanvas.width / outputCanvas.height;
+                const mult = state.paddingMultiplier;
+
+                let targetH = Math.max(faceH * mult, camH * 0.28);
+                let targetW = targetH * canvasAspect;
+
+                if (targetW > camW) {
+                    targetW = camW;
+                    targetH = targetW / canvasAspect;
+                }
+                if (targetH > camH) {
+                    targetH = camH;
+                    targetW = targetH * canvasAspect;
+                }
+
+                let targetX = faceCenterX - targetW / 2;
+                let targetY = faceCenterY - targetH * 0.42;
+
+                targetX = Math.max(0, Math.min(camW - targetW, targetX));
+                targetY = Math.max(0, Math.min(camH - targetH, targetY));
+
+                state.targetRect = makeRect(targetX, targetY, targetW, targetH);
+
+            } else {
+                // No target detected right now
                 state.peopleRect = null;
-                state.targetRect = makeRect(0, 0, camW, camH);
-                return;
+                const elapsedSinceTarget = now - state.lastTargetSeenTime;
+
+                if (elapsedSinceTarget < state.holdDurationMs && state.targetRect) {
+                    // Grace Period: Hold current target frame position for 3 full seconds!
+                    state.isHoldingFrame = true;
+                    targetHoldBadge.classList.remove('hidden');
+                    const remainingSec = ((state.holdDurationMs - elapsedSinceTarget) / 1000).toFixed(1);
+                    holdTimerCountdown.innerText = remainingSec;
+                } else {
+                    // 3 seconds passed without targets -> reset to full viewport sensor frame
+                    state.isHoldingFrame = false;
+                    targetHoldBadge.classList.add('hidden');
+                    state.targetRect = makeRect(0, 0, camW, camH);
+                }
             }
-
-            let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
-
-            for (const face of faces) {
-                const box = face.box;
-                xMin = Math.min(xMin, box.xMin);
-                xMax = Math.max(xMax, box.xMax);
-                yMin = Math.min(yMin, box.yMin);
-                yMax = Math.max(yMax, box.yMax);
-            }
-
-            const faceW = xMax - xMin;
-            const faceH = yMax - yMin;
-            const faceCenterX = xMin + faceW / 2;
-            const faceCenterY = yMin + faceH / 2;
-
-            state.peopleRect = makeRect(xMin, yMin, faceW, faceH);
-
-            // Compute ideal stage zoom rect based on active output canvas aspect ratio
-            const canvasAspect = outputCanvas.width / outputCanvas.height;
-            const mult = state.paddingMultiplier;
-
-            let targetH = Math.max(faceH * mult, camH * 0.3);
-            let targetW = targetH * canvasAspect;
-
-            // Clamp bounds if calculated crop box exceeds camera sensor dimension limits
-            if (targetW > camW) {
-                targetW = camW;
-                targetH = targetW / canvasAspect;
-            }
-            if (targetH > camH) {
-                targetH = camH;
-                targetW = targetH * canvasAspect;
-            }
-
-            // Center target around detected face centroid
-            let targetX = faceCenterX - targetW / 2;
-            let targetY = faceCenterY - targetH * 0.45; // Headroom offset
-
-            // Keep within video boundary limits
-            targetX = Math.max(0, Math.min(camW - targetW, targetX));
-            targetY = Math.max(0, Math.min(camH - targetH, targetY));
-
-            state.targetRect = makeRect(targetX, targetY, targetW, targetH);
         }
 
         // High Performance Render Loop (60 FPS)
         function renderLoop(timestamp) {
-            // FPS calculation
             state.frameCount++;
             if (timestamp - state.lastFrameTime >= 1000) {
                 state.fps = state.frameCount;
@@ -739,7 +817,17 @@
                     state.visibleRect.h = lerp(state.visibleRect.h, state.targetRect.h, state.lerpSpeed);
                 }
 
-                const v = state.visibleRect || state.cameraRect;
+                let v = state.visibleRect || state.cameraRect;
+
+                // Apply Manual Zoom level overlay on top of active crop
+                if (state.manualZoom > 1.0) {
+                    const zoomedW = v.w / state.manualZoom;
+                    const zoomedH = v.h / state.manualZoom;
+                    const zoomX = v.x + (v.w - zoomedW) / 2;
+                    const zoomY = v.y + (v.h - zoomedH) / 2;
+
+                    v = makeRect(zoomX, zoomY, zoomedW, zoomedH);
+                }
 
                 // Render cropped view onto canvas
                 outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
@@ -793,6 +881,42 @@
             if (state.targetRect) {
                 document.getElementById('dbgTargetBox').innerText = `${Math.round(state.targetRect.x)},${Math.round(state.targetRect.y)} - ${Math.round(state.targetRect.w)}x${Math.round(state.targetRect.h)}`;
             }
+        }
+
+        // Attach Gesture Listeners for Touch Pinch Zoom & Mouse Wheel Zoom
+        function attachGestureListeners() {
+            // Touch pinch zoom
+            cameraViewport.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    state.touchStartDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    state.initialZoomOnTouch = state.manualZoom;
+                }
+            }, { passive: true });
+
+            cameraViewport.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && state.touchStartDist > 0) {
+                    const currentDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const zoomFactor = currentDist / state.touchStartDist;
+                    setManualZoom(state.initialZoomOnTouch * zoomFactor);
+                }
+            }, { passive: true });
+
+            cameraViewport.addEventListener('touchend', () => {
+                state.touchStartDist = 0;
+            }, { passive: true });
+
+            // Desktop Mouse wheel zoom
+            cameraViewport.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY < 0 ? 0.1 : -0.1;
+                adjustManualZoom(delta);
+            }, { passive: false });
         }
 
         // Switch Display View Modes
@@ -899,6 +1023,7 @@
         // Application Entry Point
         window.onload = async () => {
             lucide.createIcons();
+            attachGestureListeners();
             showToast("Initializing video pipeline...");
             
             await startCameraStream();
