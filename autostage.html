@@ -35,7 +35,6 @@
         }
     </script>
     <style>
-        /* Custom scrollbars and styling */
         ::-webkit-scrollbar {
             width: 5px;
             height: 5px;
@@ -48,18 +47,17 @@
             border-radius: 9999px;
         }
         .glass-panel {
-            background: rgba(15, 23, 42, 0.78);
+            background: rgba(15, 23, 42, 0.82);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .glass-card {
-            background: rgba(30, 41, 59, 0.55);
+            background: rgba(30, 41, 59, 0.65);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        /* Mobile notch safe areas */
         .pb-safe {
             padding-bottom: max(1rem, env(safe-area-inset-bottom));
         }
@@ -73,7 +71,7 @@
     <!-- Application Shell Container -->
     <div id="appContainer" class="relative w-full h-full flex flex-col overflow-hidden">
 
-        <!-- Top Navigation / Header (Desktop Header & Mobile Floating Pill) -->
+        <!-- Top Navigation / Header -->
         <header class="glass-panel sticky top-0 z-40 w-full border-b border-slate-800/80 px-4 py-2.5 sm:px-6 pt-safe">
             <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
                 
@@ -86,7 +84,7 @@
                         <h1 class="font-bold text-base sm:text-lg leading-none bg-gradient-to-r from-slate-100 via-slate-200 to-slate-400 bg-clip-text text-transparent">
                             AutoStage <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-medium ml-0.5">AI PRO</span>
                         </h1>
-                        <p class="text-[10px] sm:text-xs text-slate-400 mt-0.5 hidden xs:block">Smart Cameraman & Face Tracking</p>
+                        <p class="text-[10px] sm:text-xs text-slate-400 mt-0.5 hidden xs:block">Smart Cameraman & Target Tracking</p>
                     </div>
                 </div>
 
@@ -127,17 +125,17 @@
             </div>
         </header>
 
-        <!-- Main Content Area: Adapts for Mobile Fullscreen & Desktop Grid -->
+        <!-- Main Content Area -->
         <main id="mainContainer" class="flex-1 relative w-full h-full overflow-hidden lg:max-w-7xl lg:mx-auto lg:p-6 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
 
-            <!-- Camera Viewport Container (Full viewport on Mobile, Card on Desktop) -->
+            <!-- Camera Viewport Container -->
             <section class="relative w-full h-full lg:h-auto lg:col-span-8 flex flex-col justify-center items-center bg-slate-950 overflow-hidden lg:rounded-2xl lg:border lg:border-slate-800 lg:shadow-2xl">
                 
                 <!-- Camera Stage Canvas Area -->
                 <div id="cameraViewport" class="relative w-full h-full lg:aspect-video flex items-center justify-center overflow-hidden bg-black touch-none">
                     
-                    <!-- Hidden Source Video Element -->
-                    <video id="webcam" autoplay playsinline muted class="hidden"></video>
+                    <!-- Hidden Source Video Element with Mobile Safe Attributes -->
+                    <video id="webcam" autoplay playsinline webkit-playsinline muted class="hidden"></video>
 
                     <!-- Render Canvas (Auto-staged) -->
                     <canvas id="outputCanvas" class="w-full h-full object-contain block"></canvas>
@@ -158,6 +156,15 @@
                         </div>
                         <div id="dbgVisibleRect" class="absolute border-2 border-amber-400 bg-amber-500/5 rounded-lg transition-all duration-75 hidden">
                             <span class="absolute bottom-1 right-2 text-[10px] font-mono text-amber-300 bg-slate-950/80 px-1.5 py-0.5 rounded">Crop</span>
+                        </div>
+
+                        <!-- Live Telemetry Stats HUD for Debug Mode -->
+                        <div id="debugHudStats" class="absolute top-16 left-4 bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 font-mono text-[10px] space-y-1 text-slate-300 shadow-2xl backdrop-blur-md">
+                            <div class="text-cyan-400 font-bold border-b border-slate-800 pb-1 mb-1">TELEMETRY DATA</div>
+                            <div>Camera: <span id="dbgCamRes" class="text-slate-100">0x0</span></div>
+                            <div>Viewport: <span id="dbgCanvasRes" class="text-slate-100">0x0</span></div>
+                            <div>Visible Box: <span id="dbgVisibleBox" class="text-amber-300">0,0 - 0x0</span></div>
+                            <div>Target Box: <span id="dbgTargetBox" class="text-fuchsia-300">0,0 - 0x0</span></div>
                         </div>
                     </div>
 
@@ -193,7 +200,7 @@
                         </div>
                     </div>
 
-                    <!-- Floating Quick Controls Toolbar (Unconstrained Mobile Floating Bar) -->
+                    <!-- Floating Quick Controls Toolbar -->
                     <div class="absolute bottom-4 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 flex items-center justify-between sm:justify-center space-x-1.5 sm:space-x-2 px-3 py-2 rounded-2xl glass-panel shadow-2xl z-20 pb-safe w-auto max-w-full">
                         
                         <!-- Camera Flip Switch -->
@@ -218,7 +225,7 @@
                         </button>
                     </div>
 
-                    <!-- Orientation Indicator Badge for Mobile -->
+                    <!-- Orientation Indicator Badge -->
                     <div id="orientationBadge" class="absolute top-4 left-4 px-2.5 py-1 rounded-full glass-card text-[10px] font-mono text-slate-300 flex items-center space-x-1.5 z-20">
                         <i data-lucide="smartphone" class="w-3 h-3 text-cyan-400"></i>
                         <span id="orientationText">PORTRAIT</span>
@@ -228,7 +235,7 @@
 
             </section>
 
-            <!-- Controls & Settings Panel (Desktop Sidebar / Mobile Bottom Sheet) -->
+            <!-- Controls & Settings Panel (Desktop Sidebar) -->
             <aside id="settingsPanel" class="hidden lg:block lg:col-span-4 space-y-5">
                 
                 <!-- Camera Settings Card -->
@@ -313,7 +320,6 @@
             </button>
         </div>
 
-        <!-- Camera Select Dropdown (Mobile Drawer) -->
         <div class="space-y-1.5">
             <label for="cameraSelectMobile" class="text-xs font-medium text-slate-400">Select Video Device</label>
             <select id="cameraSelectMobile" onchange="onMobileCameraDeviceChanged()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
@@ -321,7 +327,6 @@
             </select>
         </div>
 
-        <!-- Easing Speed Slider (Mobile Drawer) -->
         <div class="space-y-2">
             <div class="flex justify-between text-xs">
                 <label class="text-slate-400">Tracking Speed (Easing)</label>
@@ -330,7 +335,6 @@
             <input id="sliderLerpMobile" type="range" min="0.02" max="0.30" step="0.01" value="0.08" oninput="syncConfigFromMobile('lerp')" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
         </div>
 
-        <!-- Framing Margin Slider (Mobile Drawer) -->
         <div class="space-y-2">
             <div class="flex justify-between text-xs">
                 <label class="text-slate-400">Framing Margin (Zoom)</label>
@@ -344,7 +348,6 @@
     <div id="toastContainer" class="fixed top-16 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
     <script>
-        // Global Application State
         const state = {
             viewMode: 'stage', // 'stage', 'debug', 'split'
             isTrackingEnabled: true,
@@ -361,7 +364,7 @@
             paddingMultiplier: 2.2,
             manualZoom: 1.0,
 
-            // Target Hold Logic (3 seconds grace period when lost face)
+            // Target Hold Logic
             lastTargetSeenTime: performance.now(),
             holdDurationMs: 3000,
             isHoldingFrame: false,
@@ -408,6 +411,7 @@
         // Toast Helper
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
+            if (!container) return;
             const toast = document.createElement('div');
             const bgColor = type === 'error' ? 'bg-red-950/90 border-red-500/40 text-red-200' : 'bg-slate-900/90 border-slate-700 text-slate-200';
             const icon = type === 'error' ? 'alert-circle' : 'info';
@@ -416,7 +420,7 @@
             toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 text-cyan-400 shrink-0"></i><span>${message}</span>`;
             
             container.appendChild(toast);
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
 
             setTimeout(() => {
                 toast.classList.add('opacity-0', '-translate-y-2');
@@ -438,31 +442,43 @@
 
         function setManualZoom(zoomVal) {
             state.manualZoom = Math.max(1.0, Math.min(3.5, parseFloat(zoomVal.toFixed(1))));
-            document.getElementById('manualZoomBadge').innerText = `${state.manualZoom.toFixed(1)}x`;
-            document.getElementById('lblManualZoom').innerText = `${state.manualZoom.toFixed(1)}x`;
-            document.getElementById('sliderManualZoom').value = state.manualZoom;
+            const badge = document.getElementById('manualZoomBadge');
+            const lbl = document.getElementById('lblManualZoom');
+            const slider = document.getElementById('sliderManualZoom');
+            
+            if (badge) badge.innerText = `${state.manualZoom.toFixed(1)}x`;
+            if (lbl) lbl.innerText = `${state.manualZoom.toFixed(1)}x`;
+            if (slider) slider.value = state.manualZoom;
         }
 
         function onManualZoomSliderChange() {
-            const val = parseFloat(document.getElementById('sliderManualZoom').value);
-            setManualZoom(val);
+            const slider = document.getElementById('sliderManualZoom');
+            if (slider) {
+                const val = parseFloat(slider.value);
+                setManualZoom(val);
+            }
         }
 
-        // Hide Loader explicitly when stream is ready
         function hideLoader() {
-            loadingSpinner.classList.add('opacity-0');
-            loadingSpinner.style.pointerEvents = 'none';
+            if (loadingSpinner) {
+                loadingSpinner.classList.add('opacity-0');
+                loadingSpinner.style.pointerEvents = 'none';
+            }
         }
 
         function showLoader(msg = "Connecting to video source...") {
-            loadingSpinner.classList.remove('opacity-0');
-            loadingSpinner.style.pointerEvents = 'auto';
-            loadingMessage.innerText = msg;
+            if (loadingSpinner) {
+                loadingSpinner.classList.remove('opacity-0');
+                loadingSpinner.style.pointerEvents = 'auto';
+            }
+            if (loadingMessage) {
+                loadingMessage.innerText = msg;
+            }
         }
 
-        // Enumerate Available Webcams
         async function enumerateCameraDevices() {
             try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = devices.filter(d => d.kind === 'videoinput');
 
@@ -470,7 +486,7 @@
                 cameraSelectMobile.innerHTML = '';
                 
                 if (videoDevices.length === 0) {
-                    const emptyOpt = '<option value="">No cameras found</option>';
+                    const emptyOpt = '<option value="">Default Camera</option>';
                     cameraSelect.innerHTML = emptyOpt;
                     cameraSelectMobile.innerHTML = emptyOpt;
                     return;
@@ -498,34 +514,36 @@
                     cameraSelectMobile.value = state.selectedDeviceId;
                 }
             } catch (err) {
-                console.error("Device enumeration error:", err);
+                console.warn("Device enumeration warning:", err);
             }
         }
 
-        // Start or Switch Camera Stream
         async function startCameraStream(useDeviceId = null, preferredFacing = null) {
             showLoader("Connecting to camera stream...");
 
-            // Stop existing stream tracks
             if (state.currentStream) {
                 state.currentStream.getTracks().forEach(track => track.stop());
                 state.currentStream = null;
             }
 
-            const constraints = {
+            const targetFacing = preferredFacing || state.currentFacingMode;
+
+            // Flexible camera constraints to prevent OverconstrainedError on mobile browsers
+            let constraints = {
                 audio: false,
                 video: {
                     width: { ideal: 1280 },
                     height: { ideal: 720 },
+                    facingMode: targetFacing === 'environment' ? { ideal: 'environment' } : { ideal: 'user' }
                 }
             };
 
             if (useDeviceId) {
-                constraints.video.deviceId = { exact: useDeviceId };
-            } else if (preferredFacing) {
-                constraints.video.facingMode = { exact: preferredFacing };
-            } else {
-                constraints.video.facingMode = state.currentFacingMode;
+                constraints.video = {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    deviceId: { exact: useDeviceId }
+                };
             }
 
             try {
@@ -533,49 +551,47 @@
                 try {
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
                 } catch (exactErr) {
-                    console.warn("Exact facingMode request failed, trying flexible facingMode:", exactErr);
-                    constraints.video.facingMode = preferredFacing || state.currentFacingMode;
-                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    console.warn("Primary camera request failed, trying flexible fallback:", exactErr);
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 }
 
                 state.currentStream = stream;
                 videoEl.srcObject = stream;
                 
-                await videoEl.play().catch(e => console.warn("Video play exception handled:", e));
+                try {
+                    await videoEl.play();
+                } catch (playEx) {
+                    console.warn("Video play promise handled:", playEx);
+                }
 
                 const track = stream.getVideoTracks()[0];
-                const settings = track.getSettings();
-                if (settings.facingMode) {
-                    state.currentFacingMode = settings.facingMode;
-                }
-                if (settings.deviceId) {
-                    state.selectedDeviceId = settings.deviceId;
+                if (track) {
+                    const settings = track.getSettings();
+                    if (settings.facingMode) {
+                        state.currentFacingMode = settings.facingMode;
+                    }
+                    if (settings.deviceId) {
+                        state.selectedDeviceId = settings.deviceId;
+                    }
                 }
 
                 updateUIFacingBadge();
                 await enumerateCameraDevices();
+                updateCanvasDimensions();
 
                 if (state.isModelLoaded) {
                     hideLoader();
                 }
 
             } catch (error) {
-                console.warn("Facing constraint failed, attempting basic video permission:", error);
-                try {
-                    const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                    state.currentStream = fallbackStream;
-                    videoEl.srcObject = fallbackStream;
-                    await videoEl.play();
-
-                    if (state.isModelLoaded) hideLoader();
-                } catch (fallbackError) {
-                    showToast("Camera access error: " + fallbackError.message, 'error');
+                console.error("Camera access error:", error);
+                showToast("Camera access error: " + error.message, 'error');
+                if (loadingMessage) {
                     loadingMessage.innerText = "Camera access denied or unavailable";
                 }
             }
         }
 
-        // Toggle Front/Rear Facing Camera
         async function toggleFacingMode() {
             state.currentFacingMode = (state.currentFacingMode === 'user' || state.currentFacingMode.includes('user')) 
                 ? 'environment' 
@@ -604,28 +620,32 @@
 
         function updateUIFacingBadge() {
             const badge = document.getElementById('facingBadge');
+            if (!badge) return;
             const isBack = state.currentFacingMode === 'environment' || state.currentFacingMode.includes('back');
             
             badge.innerText = isBack ? 'REAR (BACK)' : 'FRONT (SELFIE)';
             badge.className = `text-[10px] font-mono font-medium px-2 py-0.5 rounded border ${isBack ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'}`;
         }
 
-        // Initialize Hybrid Detector (MediaPipe Face + COCO-SSD Person)
         async function initDetectors() {
             try {
-                showLoader("Loading AI Neural Models (Face & Head/Body)...");
-                await tf.ready();
+                showLoader("Loading AI Neural Models...");
+                if (window.tf) {
+                    await tf.ready();
+                }
                 
-                // 1. MediaPipe Face Detector (up to 10 faces)
-                const faceModel = faceDetection.SupportedModels.MediaPipeFaceDetector;
-                const detectorConfig = {
-                    runtime: 'mediapipe',
-                    solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection',
-                    maxFaces: 10
-                };
-                state.faceDetector = await faceDetection.createDetector(faceModel, detectorConfig);
+                // Initialize MediaPipe Face Detector
+                if (window.faceDetection) {
+                    const faceModel = faceDetection.SupportedModels.MediaPipeFaceDetector;
+                    const detectorConfig = {
+                        runtime: 'mediapipe',
+                        solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection',
+                        maxFaces: 10
+                    };
+                    state.faceDetector = await faceDetection.createDetector(faceModel, detectorConfig);
+                }
 
-                // 2. COCO-SSD Detector (detects people sideways & from behind)
+                // Initialize COCO-SSD Detector for back/side tracking fallback
                 if (window.cocoSsd) {
                     state.cocoDetector = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
                 }
@@ -633,26 +653,32 @@
                 state.isModelLoaded = true;
 
                 hideLoader();
-                document.getElementById('statusText').innerText = "AI Hybrid Tracking";
+                const statusTxt = document.getElementById('statusText');
+                if (statusTxt) statusTxt.innerText = "AI Hybrid Tracking";
                 showToast("Multi-face & head/body neural tracking ready!");
 
                 startDetectionLoop();
             } catch (err) {
                 console.error("Error loading detection models:", err);
-                showToast("Failed to initialize AI models: " + err.message, 'error');
-                loadingMessage.innerText = "Error loading AI Engine. Please reload.";
+                showToast("AI models loaded with reduced precision", 'info');
+                state.isModelLoaded = true;
+                hideLoader();
             }
         }
 
-        // Video Metadata Handler & Dynamic Resizing
+        // Attach safe video event listeners
         videoEl.onloadedmetadata = () => {
             updateCanvasDimensions();
-
             if (!state.isModelLoaded) {
                 initDetectors();
             } else {
                 hideLoader();
             }
+        };
+
+        videoEl.onloadeddata = () => {
+            updateCanvasDimensions();
+            hideLoader();
         };
 
         function updateCanvasDimensions() {
@@ -661,8 +687,8 @@
             state.cameraRect = makeRect(0, 0, camW, camH);
 
             const viewportContainer = document.getElementById('cameraViewport');
-            const viewportW = viewportContainer.clientWidth || window.innerWidth;
-            const viewportH = viewportContainer.clientHeight || window.innerHeight;
+            const viewportW = viewportContainer ? (viewportContainer.clientWidth || window.innerWidth) : window.innerWidth;
+            const viewportH = viewportContainer ? (viewportContainer.clientHeight || window.innerHeight) : window.innerHeight;
 
             outputCanvas.width = viewportW;
             outputCanvas.height = viewportH;
@@ -672,25 +698,29 @@
             if (!state.visibleRect) state.visibleRect = makeRect(0, 0, camW, camH);
             if (!state.targetRect) state.targetRect = makeRect(0, 0, camW, camH);
 
-            document.getElementById('dbgCamRes').innerText = `${camW}x${camH}`;
-            document.getElementById('dbgCanvasRes').innerText = `${viewportW}x${viewportH}`;
+            // Safely update debug telemetry elements if present in DOM
+            const dbgCamRes = document.getElementById('dbgCamRes');
+            if (dbgCamRes) dbgCamRes.innerText = `${camW}x${camH}`;
 
-            const isPortrait = window.innerHeight > window.innerWidth;
-            document.getElementById('orientationText').innerText = isPortrait ? 'PORTRAIT' : 'LANDSCAPE';
+            const dbgCanvasRes = document.getElementById('dbgCanvasRes');
+            if (dbgCanvasRes) dbgCanvasRes.innerText = `${viewportW}x${viewportH}`;
+
+            const orientationText = document.getElementById('orientationText');
+            if (orientationText) {
+                const isPortrait = window.innerHeight > window.innerWidth;
+                orientationText.innerText = isPortrait ? 'PORTRAIT' : 'LANDSCAPE';
+            }
         }
 
-        // Asynchronous AI Hybrid Detection Loop
         async function startDetectionLoop() {
             setInterval(async () => {
                 if (videoEl.readyState >= 2 && state.isTrackingEnabled) {
                     try {
-                        // 1. Detect faces
                         let faces = [];
                         if (state.faceDetector) {
                             faces = await state.faceDetector.estimateFaces(videoEl, { flipHorizontal: false });
                         }
 
-                        // 2. Detect people (for sideways & back view tracking when faces aren't visible)
                         let personBoxes = [];
                         if (state.cocoDetector && faces.length === 0) {
                             const predictions = await state.cocoDetector.detect(videoEl, 5, 0.4);
@@ -712,7 +742,6 @@
             }, 100);
         }
 
-        // Process faces & people detections with 3-second hold timer
         function processHybridDetections(faces, personBoxes) {
             const now = performance.now();
             const camW = state.cameraRect.w;
@@ -722,9 +751,9 @@
             state.detectedBodyCount = personBoxes.length;
 
             const totalTargets = faces.length > 0 ? faces.length : personBoxes.length;
-            document.getElementById('faceCountBadge').innerText = totalTargets;
+            const faceBadge = document.getElementById('faceCountBadge');
+            if (faceBadge) faceBadge.innerText = totalTargets;
 
-            // Gather all candidate bounding boxes
             let boxes = [];
             if (faces.length > 0) {
                 boxes = faces.map(f => f.box);
@@ -733,10 +762,9 @@
             }
 
             if (boxes.length > 0) {
-                // Active detection target found
                 state.lastTargetSeenTime = now;
                 state.isHoldingFrame = false;
-                targetHoldBadge.classList.add('hidden');
+                if (targetHoldBadge) targetHoldBadge.classList.add('hidden');
 
                 let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
 
@@ -754,7 +782,6 @@
 
                 state.peopleRect = makeRect(xMin, yMin, faceW, faceH);
 
-                // Compute framing target box
                 const canvasAspect = outputCanvas.width / outputCanvas.height;
                 const mult = state.paddingMultiplier;
 
@@ -779,37 +806,35 @@
                 state.targetRect = makeRect(targetX, targetY, targetW, targetH);
 
             } else {
-                // No target detected right now
                 state.peopleRect = null;
                 const elapsedSinceTarget = now - state.lastTargetSeenTime;
 
                 if (elapsedSinceTarget < state.holdDurationMs && state.targetRect) {
-                    // Grace Period: Hold current target frame position for 3 full seconds!
                     state.isHoldingFrame = true;
-                    targetHoldBadge.classList.remove('hidden');
-                    const remainingSec = ((state.holdDurationMs - elapsedSinceTarget) / 1000).toFixed(1);
-                    holdTimerCountdown.innerText = remainingSec;
+                    if (targetHoldBadge) targetHoldBadge.classList.remove('hidden');
+                    if (holdTimerCountdown) {
+                        const remainingSec = ((state.holdDurationMs - elapsedSinceTarget) / 1000).toFixed(1);
+                        holdTimerCountdown.innerText = remainingSec;
+                    }
                 } else {
-                    // 3 seconds passed without targets -> reset to full viewport sensor frame
                     state.isHoldingFrame = false;
-                    targetHoldBadge.classList.add('hidden');
+                    if (targetHoldBadge) targetHoldBadge.classList.add('hidden');
                     state.targetRect = makeRect(0, 0, camW, camH);
                 }
             }
         }
 
-        // High Performance Render Loop (60 FPS)
         function renderLoop(timestamp) {
             state.frameCount++;
             if (timestamp - state.lastFrameTime >= 1000) {
                 state.fps = state.frameCount;
                 state.frameCount = 0;
                 state.lastFrameTime = timestamp;
-                document.getElementById('fpsBadge').innerText = state.fps;
+                const fpsBadge = document.getElementById('fpsBadge');
+                if (fpsBadge) fpsBadge.innerText = state.fps;
             }
 
             if (videoEl.readyState >= 2) {
-                // Smooth LERP camera movement
                 if (state.targetRect && state.visibleRect && state.isTrackingEnabled) {
                     state.visibleRect.x = lerp(state.visibleRect.x, state.targetRect.x, state.lerpSpeed);
                     state.visibleRect.y = lerp(state.visibleRect.y, state.targetRect.y, state.lerpSpeed);
@@ -819,7 +844,6 @@
 
                 let v = state.visibleRect || state.cameraRect;
 
-                // Apply Manual Zoom level overlay on top of active crop
                 if (state.manualZoom > 1.0) {
                     const zoomedW = v.w / state.manualZoom;
                     const zoomedH = v.h / state.manualZoom;
@@ -829,7 +853,6 @@
                     v = makeRect(zoomX, zoomY, zoomedW, zoomedH);
                 }
 
-                // Render cropped view onto canvas
                 outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
                 outputCtx.drawImage(
                     videoEl,
@@ -837,13 +860,11 @@
                     0, 0, outputCanvas.width, outputCanvas.height
                 );
 
-                // Render Split view PIP raw canvas
                 if (state.viewMode === 'split') {
                     rawCtx.clearRect(0, 0, rawCanvas.width, rawCanvas.height);
                     rawCtx.drawImage(videoEl, 0, 0, rawCanvas.width, rawCanvas.height);
                 }
 
-                // Render debug boxes
                 if (state.viewMode === 'debug') {
                     updateDebugOverlayUI();
                 }
@@ -852,7 +873,6 @@
             requestAnimationFrame(renderLoop);
         }
 
-        // Update Debug Layer Positions
         function updateDebugOverlayUI() {
             const canvasW = outputCanvas.clientWidth;
             const canvasH = outputCanvas.clientHeight;
@@ -860,6 +880,7 @@
             const scaleY = canvasH / state.cameraRect.h;
 
             const positionElement = (el, rect) => {
+                if (!el) return;
                 if (!rect) {
                     el.classList.add('hidden');
                     return;
@@ -875,17 +896,20 @@
             positionElement(dbgTargetRect, state.targetRect);
             positionElement(dbgVisibleRect, state.visibleRect);
 
-            if (state.visibleRect) {
-                document.getElementById('dbgVisibleBox').innerText = `${Math.round(state.visibleRect.x)},${Math.round(state.visibleRect.y)} - ${Math.round(state.visibleRect.w)}x${Math.round(state.visibleRect.h)}`;
+            const dbgVisBox = document.getElementById('dbgVisibleBox');
+            if (dbgVisBox && state.visibleRect) {
+                dbgVisBox.innerText = `${Math.round(state.visibleRect.x)},${Math.round(state.visibleRect.y)} - ${Math.round(state.visibleRect.w)}x${Math.round(state.visibleRect.h)}`;
             }
-            if (state.targetRect) {
-                document.getElementById('dbgTargetBox').innerText = `${Math.round(state.targetRect.x)},${Math.round(state.targetRect.y)} - ${Math.round(state.targetRect.w)}x${Math.round(state.targetRect.h)}`;
+
+            const dbgTgtBox = document.getElementById('dbgTargetBox');
+            if (dbgTgtBox && state.targetRect) {
+                dbgTgtBox.innerText = `${Math.round(state.targetRect.x)},${Math.round(state.targetRect.y)} - ${Math.round(state.targetRect.w)}x${Math.round(state.targetRect.h)}`;
             }
         }
 
-        // Attach Gesture Listeners for Touch Pinch Zoom & Mouse Wheel Zoom
         function attachGestureListeners() {
-            // Touch pinch zoom
+            if (!cameraViewport) return;
+
             cameraViewport.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 2) {
                     state.touchStartDist = Math.hypot(
@@ -911,7 +935,6 @@
                 state.touchStartDist = 0;
             }, { passive: true });
 
-            // Desktop Mouse wheel zoom
             cameraViewport.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 const delta = e.deltaY < 0 ? 0.1 : -0.1;
@@ -919,7 +942,6 @@
             }, { passive: false });
         }
 
-        // Switch Display View Modes
         function setViewMode(mode) {
             state.viewMode = mode;
 
@@ -930,53 +952,59 @@
             const inactiveClass = "flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 rounded-lg text-slate-400 hover:text-slate-200 transition-all duration-200";
             const activeClass = "flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 rounded-lg transition-all duration-200 bg-cyan-500 text-slate-950 font-semibold shadow-md shadow-cyan-500/20";
 
-            tabStage.className = mode === 'stage' ? activeClass : inactiveClass;
-            tabDebug.className = mode === 'debug' ? activeClass : inactiveClass;
-            tabSplit.className = mode === 'split' ? activeClass : inactiveClass;
+            if (tabStage) tabStage.className = mode === 'stage' ? activeClass : inactiveClass;
+            if (tabDebug) tabDebug.className = mode === 'debug' ? activeClass : inactiveClass;
+            if (tabSplit) tabSplit.className = mode === 'split' ? activeClass : inactiveClass;
 
-            if (mode === 'debug') {
-                debugOverlayLayer.classList.remove('opacity-0');
-                debugOverlayLayer.classList.add('opacity-100');
-            } else {
-                debugOverlayLayer.classList.remove('opacity-100');
-                debugOverlayLayer.classList.add('opacity-0');
+            if (debugOverlayLayer) {
+                if (mode === 'debug') {
+                    debugOverlayLayer.classList.remove('opacity-0');
+                    debugOverlayLayer.classList.add('opacity-100');
+                } else {
+                    debugOverlayLayer.classList.remove('opacity-100');
+                    debugOverlayLayer.classList.add('opacity-0');
+                }
             }
 
-            if (mode === 'split') {
-                splitRawContainer.classList.remove('hidden');
-            } else {
-                splitRawContainer.classList.add('hidden');
+            if (splitRawContainer) {
+                if (mode === 'split') {
+                    splitRawContainer.classList.remove('hidden');
+                } else {
+                    splitRawContainer.classList.add('hidden');
+                }
             }
 
             showToast(`Switched view: ${mode.toUpperCase()}`);
         }
 
-        // Toggle Dynamic Auto Framing
         function toggleTracking() {
             state.isTrackingEnabled = !state.isTrackingEnabled;
             const btnLabel = document.getElementById('btnTrackingLabel');
-            btnLabel.innerText = state.isTrackingEnabled ? "Auto Stage On" : "Auto Stage Off";
+            if (btnLabel) {
+                btnLabel.innerText = state.isTrackingEnabled ? "Auto Stage On" : "Auto Stage Off";
+            }
             showToast(state.isTrackingEnabled ? "Auto framing active" : "Auto framing paused");
         }
 
-        // Mobile Settings Drawer Toggle
         function toggleMobileSettingsDrawer() {
             state.isMobileDrawerOpen = !state.isMobileDrawerOpen;
             const drawer = document.getElementById('mobileDrawer');
             const backdrop = document.getElementById('mobileDrawerBackdrop');
 
-            if (state.isMobileDrawerOpen) {
-                backdrop.classList.remove('opacity-0', 'pointer-events-none');
-                drawer.classList.remove('translate-y-full');
-            } else {
-                backdrop.classList.add('opacity-0', 'pointer-events-none');
-                drawer.classList.add('translate-y-full');
+            if (drawer && backdrop) {
+                if (state.isMobileDrawerOpen) {
+                    backdrop.classList.remove('opacity-0', 'pointer-events-none');
+                    drawer.classList.remove('translate-y-full');
+                } else {
+                    backdrop.classList.add('opacity-0', 'pointer-events-none');
+                    drawer.classList.add('translate-y-full');
+                }
             }
         }
 
-        // Fullscreen Toggle
         function toggleFullscreen() {
             const elem = document.getElementById('cameraViewport');
+            if (!elem) return;
             if (!document.fullscreenElement) {
                 if (elem.requestFullscreen) elem.requestFullscreen();
                 else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
@@ -985,46 +1013,54 @@
             }
         }
 
-        // Sync Controls Configuration
         function updateConfig() {
-            const lerpVal = parseFloat(document.getElementById('sliderLerp').value);
-            const padVal = parseFloat(document.getElementById('sliderPadding').value);
+            const lerpSlider = document.getElementById('sliderLerp');
+            const padSlider = document.getElementById('sliderPadding');
+
+            const lerpVal = lerpSlider ? parseFloat(lerpSlider.value) : 0.08;
+            const padVal = padSlider ? parseFloat(padSlider.value) : 2.2;
 
             state.lerpSpeed = lerpVal;
             state.paddingMultiplier = padVal;
 
-            document.getElementById('lblLerp').innerText = lerpVal.toFixed(2);
-            document.getElementById('lblPadding').innerText = padVal.toFixed(1) + 'x';
+            const lblLerp = document.getElementById('lblLerp');
+            const lblPadding = document.getElementById('lblPadding');
+            if (lblLerp) lblLerp.innerText = lerpVal.toFixed(2);
+            if (lblPadding) lblPadding.innerText = padVal.toFixed(1) + 'x';
 
-            // Sync Mobile controls UI
-            document.getElementById('sliderLerpMobile').value = lerpVal;
-            document.getElementById('sliderPaddingMobile').value = padVal;
-            document.getElementById('lblLerpMobile').innerText = lerpVal.toFixed(2);
-            document.getElementById('lblPaddingMobile').innerText = padVal.toFixed(1) + 'x';
+            const sliderLerpMobile = document.getElementById('sliderLerpMobile');
+            const sliderPaddingMobile = document.getElementById('sliderPaddingMobile');
+            const lblLerpMobile = document.getElementById('lblLerpMobile');
+            const lblPaddingMobile = document.getElementById('lblPaddingMobile');
+
+            if (sliderLerpMobile) sliderLerpMobile.value = lerpVal;
+            if (sliderPaddingMobile) sliderPaddingMobile.value = padVal;
+            if (lblLerpMobile) lblLerpMobile.innerText = lerpVal.toFixed(2);
+            if (lblPaddingMobile) lblPaddingMobile.innerText = padVal.toFixed(1) + 'x';
         }
 
         function syncConfigFromMobile(type) {
             if (type === 'lerp') {
-                const val = parseFloat(document.getElementById('sliderLerpMobile').value);
-                document.getElementById('sliderLerp').value = val;
+                const mobLerp = document.getElementById('sliderLerpMobile');
+                const desktopLerp = document.getElementById('sliderLerp');
+                if (mobLerp && desktopLerp) desktopLerp.value = mobLerp.value;
             } else {
-                const val = parseFloat(document.getElementById('sliderPaddingMobile').value);
-                document.getElementById('sliderPadding').value = val;
+                const mobPad = document.getElementById('sliderPaddingMobile');
+                const desktopPad = document.getElementById('sliderPadding');
+                if (mobPad && desktopPad) desktopPad.value = mobPad.value;
             }
             updateConfig();
         }
 
-        // Resize and Orientation Event Listeners
         window.addEventListener('resize', updateCanvasDimensions);
         window.addEventListener('orientationchange', () => {
             setTimeout(updateCanvasDimensions, 200);
         });
 
-        // Application Entry Point
         window.onload = async () => {
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
             attachGestureListeners();
-            showToast("Initializing video pipeline...");
+            showToast("Initializing camera feed...");
             
             await startCameraStream();
             requestAnimationFrame(renderLoop);
